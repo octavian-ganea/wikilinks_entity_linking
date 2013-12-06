@@ -19,6 +19,10 @@ public class WikilinksParser {
 			System.exit(1);
 		}
 		next_line = in.readLine();
+		while (!next_line.startsWith("--- Page num:")) {
+			next_line = in.readLine();			
+		}
+		
 		rez.page_num = Integer.parseInt(next_line.substring(next_line.indexOf(":") + 2));
 		next_line = in.readLine();
 		rez.doc_id = Integer.parseInt(next_line.substring(next_line.indexOf(":") + 2));
@@ -57,8 +61,9 @@ public class WikilinksParser {
 			next_line = in.readLine();						
 		}
 		*/
+		
 		StringBuilder allTextSb = new StringBuilder();
-		while (next_line != null && next_line != "-------------------------------------") {
+		while (next_line != null && next_line.compareTo("-------------------------------------") != 0) {
 			allTextSb.append(next_line + "\n");
 			next_line = in.readLine();			
 		}

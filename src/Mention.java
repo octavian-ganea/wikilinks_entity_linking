@@ -1,6 +1,11 @@
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+
 
 public class Mention {
+	// This url is not decoded !!! Use prunnedURL() for this
 	String wiki_url = null;
+	
 	String freebase_id = null;
 	String anchor_text = null;
 	
@@ -23,5 +28,9 @@ public class Mention {
 	
 	public Mention clone() {
 		return new Mention(wiki_url +"; " + freebase_id + " --> " + anchor_text);
+	}
+	
+	public String prunnedURL() {
+		return Utils.pruneURL(wiki_url);
 	}
 }
