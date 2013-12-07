@@ -15,9 +15,8 @@ import java.util.Map.Entry;
 public class Part2 {
 	// Part 2 : extract a set with all entities from the Wikilinks corpus and their doc frequencies
 	// CODE : get mentions for each item; add to a file pair (wikipedia url without wikipedia.org/wiki/, #docs)
-	// Input: args[0] = file that contains part1.output, namely WikilinksItems	
-	// Output: args[0]._2_shard
 	public static void _2_shard_main(String dir_file) throws IOException {		
+		if (!dir_file.endsWith("/")) dir_file += "/";
 		File dir = new File(dir_file);
 		if(dir.isDirectory()==false){
 			System.out.println("Directory does not exists : " + dir_file);
@@ -26,7 +25,7 @@ public class Part2 {
 		String[] list = dir.list();
 		for (String filename : list) {
 			if (!filename.endsWith(".data")) continue;		
-			WikilinksParser p = new WikilinksParser(filename);
+			WikilinksParser p = new WikilinksParser(dir_file + filename);
 			
 			HashMap<String, Integer> freq_map = new HashMap<String, Integer>();
 			
@@ -37,8 +36,8 @@ public class Part2 {
 				
 				HashSet<String> hs = new HashSet<String>();
 				for (Mention m : i.mentions) {
-					if (m.prunnedURL().length() > 0)
-						hs.add(m.prunnedURL());
+					if (m.wiki_url.length() > 0)
+						hs.add(m.wiki_url);
 				}
 				
 				Iterator<String> it = hs.iterator();
@@ -52,7 +51,6 @@ public class Part2 {
 			}
 			
 			// Write data to output file:
-			if (!dir_file.endsWith("/")) dir_file += "/";
 			PrintWriter writer = new PrintWriter(dir_file + filename + "._2_shard", "UTF-8");
 			for (Entry<String, Integer> e : freq_map.entrySet()) {
 				writer.println(e.getKey() + "\t" + e.getValue());
@@ -66,9 +64,8 @@ public class Part2 {
 	
 
 	// Code to merge all shards into a final file with (url, doc freq)
-	// Input: args[0] = directory that contains all *._2_shard files	
-	// Output: _2_merge
-	public static void _2_merge_main(String dir_file) throws IOException {
+	// Input: directory that contains all *._2_shard files
+	public static void _2_merge_main(String dir_file, String out_file) throws IOException {
 		if (!dir_file.endsWith("/")) dir_file += "/";
 		int total_nr_docs = 0;
 		HashMap<String, Integer> freq_map = new HashMap<String, Integer>();
@@ -97,7 +94,7 @@ public class Part2 {
 			total_nr_docs += Integer.parseInt(next_line);
 		}
 
-		PrintWriter writer = new PrintWriter(dir_file + "_2_merge", "UTF-8");		
+		PrintWriter writer = new PrintWriter(out_file, "UTF-8");		
 		for (Entry<String, Integer> e : freq_map.entrySet()) {
 			writer.println(e.getKey() + "\t" + e.getValue());
 		}

@@ -20,17 +20,14 @@ public class Mention {
 			freebase_id = serializable.substring(serializable.indexOf("; /m/") + 2, serializable.indexOf(" --> "));
 		}
 		wiki_url = serializable.substring(0,serializable.indexOf("; "));
+		wiki_url = Utils.pruneURL(wiki_url);
 	}
 	
 	public String toString() {
-		return wiki_url + "; " + freebase_id + " --> " + anchor_text;
+		return wiki_url + "; " + freebase_id + " --> " + anchor_text + " -------------";
 	}
 	
 	public Mention clone() {
 		return new Mention(wiki_url +"; " + freebase_id + " --> " + anchor_text);
-	}
-	
-	public String prunnedURL() {
-		return Utils.pruneURL(wiki_url);
 	}
 }

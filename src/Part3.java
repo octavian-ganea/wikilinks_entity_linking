@@ -11,12 +11,12 @@ import java.util.StringTokenizer;
 public class Part3 {
 	private static HashSet<String> knownEntities = new HashSet<String>();
 	
-	private static void LoadKnownEntities() throws IOException {
-		if (!new File("_2_merge").exists()) {
-			System.out.println("File _2_merge does not exists");
+	private static void LoadKnownEntities(String entities_file) throws IOException {
+		if (!new File(entities_file).exists()) {
+			System.out.println("File " + entities_file + " does not exists");
 			System.exit(1);
 		}
-		BufferedReader in = new BufferedReader(new FileReader("_2_merge"));
+		BufferedReader in = new BufferedReader(new FileReader(entities_file));
 		String next_line = in.readLine();
 		while (!next_line.startsWith("NR DOCS:")) {
 			StringTokenizer st = new StringTokenizer(next_line, "\t");
@@ -27,11 +27,11 @@ public class Part3 {
 	}
 	
 	// P(e|n)
-	public static void _3_prune_dict(String filename) throws IOException, InterruptedException {
-		LoadKnownEntities();
+	public static void _3_prune_dict(String filename, String entities_file, String out_file) throws IOException, InterruptedException {
+		LoadKnownEntities(entities_file);
 		
 		BufferedReader in = new BufferedReader(new FileReader(filename));
-		PrintWriter writer = new PrintWriter("prunned_" + filename, "UTF-8");	
+		PrintWriter writer = new PrintWriter(out_file, "UTF-8");	
 		
 		in.readLine();
 		String line = in.readLine();
@@ -54,14 +54,14 @@ public class Part3 {
 
 			StringTokenizer st2 = new StringTokenizer(st.nextToken(), " ");
 			double cprob = Double.parseDouble(st2.nextToken());				
-			String url = st2.nextToken();			
+			String url = st2.nextToken();
+			url = Utils.pruneURL(url);
 			
 			if (!knownEntities.contains(Utils.pruneURL(url)) || cprob < 0.0001) {
 				line = in.readLine();
 				continue;
 			}
-			//InvertedIndexEntry iie = new InvertedIndexEntry(mention, url, cprob);
-			writer.println(line);
+			writer.println(mention + "\t" + cprob + " " + url);
 			line = in.readLine();
 		}
 		in.close();
@@ -69,13 +69,13 @@ public class Part3 {
 		writer.close();
 	}
 	
-	// half size of the dict: P(n|e)
-	public static void _3_prune_invdict(String filename) throws IOException, InterruptedException {
+	// P(n|e)
+	public static void _3_prune_invdict(String filename, String entities_file, String out_file) throws IOException, InterruptedException {
 		// <url><tab><cprob><space><string>[<tab><score>[<space><score>]*]
-		LoadKnownEntities();
+		LoadKnownEntities(entities_file);
 		
 		BufferedReader in = new BufferedReader(new FileReader(filename));
-		PrintWriter writer = new PrintWriter("prunned_" + filename, "UTF-8");	
+		PrintWriter writer = new PrintWriter(out_file, "UTF-8");	
 		
 		in.readLine();
 		String line = in.readLine();
@@ -90,6 +90,7 @@ public class Part3 {
 				continue;
 			}
 			String url = st.nextToken();
+			url = Utils.pruneURL(url);
 			
 			if (!st.hasMoreTokens()) {
 				line = in.readLine();
@@ -104,8 +105,7 @@ public class Part3 {
 				line = in.readLine();
 				continue;
 			}
-			//InvertedIndexEntry iie = new InvertedIndexEntry(mention, url, cprob);
-			writer.println(line);
+			writer.println(url + "\t" + cprob + " " + mention);
 			line = in.readLine();
 		}
 		in.close();		

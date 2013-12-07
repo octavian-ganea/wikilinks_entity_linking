@@ -1,11 +1,35 @@
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.StringTokenizer;
 
 public class Utils {
+	private static HashMap<String,String> wikiRedirects = null;
+	
+	public static void loadWikiRedirects(String filename) throws IOException {
+		wikiRedirects = new HashMap<String,String>();
+		
+		if (new java.io.File(filename).exists() == false) {
+			System.err.println("[FATAL] Wikipedia Redirects file does not exist.");
+			System.exit(1);
+		}
+		
+		BufferedReader in = new BufferedReader(new FileReader(filename));
+		String line = in.readLine();
+		while (line != null) {
+			StringTokenizer st = new StringTokenizer(line, "\t");
+			wikiRedirects.put(st.nextToken(), st.nextToken());
+			line = in.readLine();
+		}
+	}
 	
 	public static String pruneURL(String s) {
-		String url = s;
+		String url = s.trim();
 		if (url.contains("wiki/")) {
 			url = url.substring(url.lastIndexOf("wiki/") + "wiki/".length());
 		}
@@ -19,6 +43,12 @@ public class Utils {
 		} catch (java.lang.IllegalArgumentException e) {
 	    }	
 		
+		final_url = final_url.replace('_', ' ');
+		if (wikiRedirects.containsKey(final_url)) {
+			final_url = wikiRedirects.get(final_url);
+		}
+		
+		final_url = final_url.replace(' ', '_');
 		StringBuilder sb = new StringBuilder();
 		boolean good = true;
 		for (char c : final_url.toCharArray()) {
