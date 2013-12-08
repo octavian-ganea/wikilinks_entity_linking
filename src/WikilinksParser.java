@@ -69,6 +69,8 @@ public class WikilinksParser {
 		}
 		rez.all_text = allTextSb.toString();
 		
+		rez.cleanText();
+		
 		return rez;
 	}
 	

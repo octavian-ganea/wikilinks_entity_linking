@@ -9,6 +9,9 @@ public class Mention {
 	String freebase_id = null;
 	String anchor_text = null;
 	
+	int old_text_offset = -1;
+	int text_offset = -1;
+	
 	// e.g. http://en.wikipedia.org/wiki/Pharoahe_Monch; /m/03f5_l2 --> Pharoahe Monch
 	public Mention(String serializable) {
 		if (!serializable.contains(" --> ")) {
@@ -24,7 +27,7 @@ public class Mention {
 	}
 	
 	public String toString() {
-		return wiki_url + "; " + freebase_id + " --> " + anchor_text + " -------------";
+		return wiki_url + "; " + freebase_id + " --> " + anchor_text + " ------- ";
 	}
 	
 	public Mention clone() {

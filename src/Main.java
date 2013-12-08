@@ -48,10 +48,12 @@ public class Main {
 		
 		// Generate (n,e) candidates with P(n|e) >= theta and n appears in HTML.
 		// Input: args[0] = prunned inv.dict P(n|e)
-		//        args[1] = theta
-		//        args[2] = input WikiLinkItems shard file of the Wikilinks corpus
-		if (args.length == 4 && args[3].compareTo("[5]") == 0) {
-			GenCandidateEntityNamePairs.generate(args[0], Double.parseDouble(args[1]), args[2]);
+		//        args[1] = prunned dict P(e|n) 
+		//        args[2] = all entities file generated from [2]
+		//        args[3] = theta
+		//        args[4] = input WikiLinkItems shard file of the Wikilinks corpus
+		if (args.length == 6 && args[5].compareTo("[5]") == 0) {
+			GenCandidateEntityNamePairs.generate(args[0], args[1], args[2], Double.parseDouble(args[3]), args[4]);
 		}		
 			
 	

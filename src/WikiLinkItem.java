@@ -29,4 +29,43 @@ public class WikiLinkItem {
 		
 		return sb.toString();
 	}
+	
+	// Remove tags in the text.
+	public void cleanText() {
+		//System.out.println(all_text);
+		
+		int k = 0;
+		for (Mention m : mentions) {
+			m.old_text_offset = all_text.indexOf("[[[start " + k + "]]]");
+			k++;
+		}
+		
+		StringBuilder sb = new StringBuilder();
+		
+		for (int i = 0; i < all_text.length(); ++i) {
+			if (all_text.charAt(i) == '[' && all_text.indexOf("[[[start", i) == i) {
+				int mentionIndex = Integer.parseInt(
+						all_text.substring(i + "[[[start ".length(), all_text.indexOf("]]]",i)));
+				int mentionOffset = sb.length();
+				
+				boolean wasSpace = (i > 0 && all_text.charAt(i-1) == ' ');
+
+				i = all_text.indexOf("]]]",i) + "]]]".length();
+				if (wasSpace && all_text.charAt(i) == ' ') i++;
+				if (all_text.charAt(i) == ' ') mentionOffset++;
+				
+				int j = all_text.indexOf("[[[end", i);
+				for (;i<j;++i) sb.append(all_text.charAt(i));
+				
+				wasSpace = (all_text.charAt(j-1) == ' ');
+				i = all_text.indexOf("]]]",j) + "]]]".length() - 1;
+				if (wasSpace && i < all_text.length() - 1 && all_text.charAt(i) == ' ') i++;
+				
+				mentions.get(mentionIndex).text_offset = mentionOffset;
+			} else {
+				sb.append(all_text.charAt(i));
+			}
+		}
+		all_text = sb.toString();
+	}
 }
