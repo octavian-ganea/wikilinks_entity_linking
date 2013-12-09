@@ -22,7 +22,7 @@ class Candidate {
 	double invdictProb; // probability P(n|e)
 	double posteriorProb; // as from formula (8)
 	
-	public Candidate(String entityURL, 	String freebaseID, 	String name, int textIndex, double invdictProb) {
+	public Candidate(String entityURL, String freebaseID, String name, int textIndex, double invdictProb) {
 		this.entityURL = entityURL;
 		this.freebaseID= freebaseID ;
 		this.name = name;
@@ -88,7 +88,6 @@ public class GenCandidateEntityNamePairs {
 	}	
 
 	// dict: P(e|n)
-	// TODO: load just e,n with n in the candidates
 	private static void LoadDict(String filename, HashSet<String> allCandidateNames) throws IOException{
 		// <string><tab><cprob><space><url>
 		dict =  new HashMap<String, TreeMap<String, Double>>();
@@ -177,8 +176,9 @@ public class GenCandidateEntityNamePairs {
 			}
 			
 			Vector<Candidate> currentPageCandidates = new Vector<Candidate>();
-			
+
 			Iterator<String> it = hs.iterator();
+			
 			while(it.hasNext()) {
 				String url = it.next();
 				
@@ -190,7 +190,10 @@ public class GenCandidateEntityNamePairs {
 				for (Entry<String, Double> entry : set) {
 					if (entry.getValue() >= theta) {
 						String name = entry.getKey();
+						if (name.length() == 0) continue;
+						
 						int index = i.all_text.indexOf(name);
+						
 						while (index != -1) {
 							// Keep just candidates that are separate words.
 							if (index > 0 && !Utils.isWordSeparator(i.all_text.charAt(index-1))) {
