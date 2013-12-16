@@ -70,7 +70,7 @@ public class GenCandidateEntityNamePairs {
 	
 	// Total number of docs from the Wikilinks corpus.
 	private static int totalNumDocs = 0;
-
+	
 	///////////////////////////////////// Classes ///////////////////////////////////////////////
 	// Class used to store the counters for dummy probabilities P(dummy | name)
 	private static class DummyIntPair {
