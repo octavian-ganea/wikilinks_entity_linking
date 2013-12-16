@@ -7,6 +7,7 @@ import java.net.URLDecoder;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.StringTokenizer;
+import java.util.Vector;
 
 public class Utils {
 	private static HashMap<String,String> wikiRedirects = null;
@@ -72,7 +73,8 @@ public class Utils {
 	
 	static 	public boolean isWordSeparator(char c) {
 		if (c == ' ' || c == ',' || c == '"' || c == ':' || c == '.' || c == '?' || c == '!' || c == '(' ||
-				c == ')' || c == '[' || c == ']' || c == '+' || c == '=' || c == '\'' || c == '`')
+				c == ')' || c == '[' || c == ']' || c == '+' || c == '=' || c == '\'' || c == '`' || c == '\n' ||
+				c == '\r' || c == ';' || c =='#' || Character.isWhitespace(c) || Character.isSpace(c))
 			return true;
 		return false;
 	}
@@ -90,5 +92,78 @@ public class Utils {
 			return false;
 		}		
 		return true;
+	}
+	
+
+	
+	static 	public boolean isWordSeparatorInTheSameSentence(char c) {
+		if (c == ' ' || c == '\'' || Character.isWhitespace(c) || Character.isSpace(c))
+			return true;
+		return false;
+	}
+	
+	
+	// Returns all sub-token spans of t=n-,n,n+ that contain n.
+	// n is the token starting at offset from text.
+	static public Vector<TokenSpan> getTokenSpans(String text, int offset) {
+		Vector<TokenSpan> spans = new Vector<TokenSpan>();
+		
+		if (offset < 0 || offset >= text.length()) return spans;
+		int startN = offset;
+		
+		int i = offset;
+		while (i < text.length() && !isWordSeparator(text.charAt(i))) i++;
+		int endN = i-1;
+		
+		i = startN - 1;
+		while (i >= 0 && isWordSeparator(text.charAt(i))) {
+			if (!isWordSeparatorInTheSameSentence(text.charAt(i))) {
+				i = startN;
+				break;
+			}
+			i--;
+		}
+		
+		// Start index of n-
+		int startMinusN = i;
+		if (i < startN) {
+			while(i >= 0 && !isWordSeparator(text.charAt(i))) i--;
+			i++;
+			startMinusN = i;
+		}
+		
+		i = endN + 1;
+		while (i < text.length() && isWordSeparator(text.charAt(i))) {
+			if (!isWordSeparatorInTheSameSentence(text.charAt(i))) {
+				i = endN;
+				break;
+			}
+			i++;
+		}
+		
+		// End index of the last char of n+
+		int endPlusN=i;
+		if (i > endN) {
+			while(i < text.length() && !isWordSeparator(text.charAt(i))) i++;
+			i--;
+			endPlusN = i;
+		}
+		
+		// n
+		spans.add(new TokenSpan(startN, endN+1));
+		if (startMinusN < startN) {
+			// n-,n
+			spans.add(new TokenSpan(startMinusN, endN+1));			
+		}
+		if (endPlusN > endN) {
+			// n,n+
+			spans.add(new TokenSpan(startN, endPlusN+1));			
+		}
+		if (endPlusN > endN && startMinusN < startN) {
+			// n-,n,n+
+			spans.add(new TokenSpan(startMinusN, endPlusN+1));			
+		}
+		
+		return spans;
 	}
 }

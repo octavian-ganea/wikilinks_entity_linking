@@ -23,13 +23,13 @@ import java.util.Vector;
 public class Main {
 	///////////////////// MAIN ////////////////////////////////////////////
 	public static void main(String[] args) throws Exception {
-		Utils.loadWikiRedirects("wiki-redirects/wikipedia_redirect.txt");
+		Utils.loadWikiRedirects("wiki-redirects/wikipedia_redirect.txt");		
 		
 		// Part 2 : extract a set with all entities from the Wikilinks corpus (*.data file)
 		// together with their doc frequencies
 		// INPUT: args[0] = directory that contains all *.data files	
 		// OUTPUT: args[1] = file with (url, doc freq) 
-		if (args.length == 3 && args[2].compareTo("[2]") == 0) {
+		if (args.length == 3 && args[2].compareTo("[all_corpus_ents]") == 0) {
 			Part2._2_shard_main(args[0]);
 			Part2._2_merge_main(args[0], args[1]);
 			return;
@@ -39,24 +39,42 @@ public class Main {
 		// INPUT: args[0] = file that contains dict or invdict;
         //        args[1] = file with all entities obtained by running [2]
 		// OUTPUT: args[2]
-		if (args.length == 4 && args[3].compareTo("[3.dict]") == 0) {
+		if (args.length == 4 && args[3].compareTo("[prune_dict]") == 0) {
 			Part3._3_prune_dict(args[0], args[1], args[2]);
 		}	
-		if (args.length == 4 && args[3].compareTo("[3.invdict]") == 0) {
+		if (args.length == 4 && args[3].compareTo("[prune_invdict]") == 0) {
 			Part3._3_prune_invdict(args[0], args[1], args[2]);
 		}	
+					
+		// Extract a set of all names from the dictionary.
+		// Input: args[0] = dictionary file
+		if (args.length == 2 && args[1].compareTo("[dict_names]") == 0) {
+			ExtractNamesFromCrosswikiDict.extract(args[0]);
+		}
+		
+		// Computes p(dummy | n) probabilities for all names n by looking at all files from the
+		// Wikilinks corpus and counting the number of docs where n the anchor text of an Wikipedia link
+		// over the number of docs in which n appears
+		// Input: args[0] = file with all known names
+		//        args[1] = directory with corpus data
+		if (args.length == 3 && args[2].compareTo("[dummy_probs]") == 0) {
+			DummyEntityProbabilities.compute(args[0], args[1]);
+		}		
+		
 		
 		// Generate (n,e) candidates with P(n|e) >= theta and n appears in HTML.
-		// Input: args[0] = prunned inv.dict P(n|e)
-		//        args[1] = prunned dict P(e|n) 
+		// Input: args[0] = prunned inv.dict P(n|e) containing just entities from the shard file we look at
+		//        args[1] = complete dict file P(e|n) 
 		//        args[2] = all entities file generated from [2]
-		//        args[3] = theta
-		//        args[4] = input WikiLinkItems shard file of the Wikilinks corpus
-		if (args.length == 6 && args[5].compareTo("[5]") == 0) {
-			GenCandidateEntityNamePairs.generate(args[0], args[1], args[2], Double.parseDouble(args[3]), args[4]);
+		//        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n)
+		//        args[4] = theta
+		//        args[5] = input WikiLinkItems shard file of the Wikilinks corpus
+		if (args.length == 7 && args[6].compareTo("[gen_cand]") == 0) {
+			GenCandidateEntityNamePairs.run(
+					args[0], args[1], args[2], args[3], Double.parseDouble(args[4]), args[5], false);
 		}		
-			
-	
+
+		
 	}
 	///////////////////////////////////////////////////////////////////////
 	
