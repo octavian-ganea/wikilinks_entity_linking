@@ -30,7 +30,9 @@ public class AnnotateSentFromAllPagesIndex implements AnnotateSentences {
 		HashMap<String, TreeMap<String, Integer>> inverted_index = new HashMap<String, TreeMap<String, Integer>>();
 		for (char c = 'A'; c <= 'Z'; c++) {
 			File f = new File(index_dir + c + ".shard");
-			if (!f.exists()) continue;
+			if (!f.exists()) {
+			    continue;
+			}
 			BufferedReader in = new BufferedReader(new FileReader(f));
 			String line = in.readLine();
 			while (line != null && line.length() > 3) {
@@ -115,7 +117,7 @@ public class AnnotateSentFromAllPagesIndex implements AnnotateSentences {
 			int lastIndex = 0;
 			while(lastIndex != -1){
 				lastIndex = rez.indexOf(m.anchor_text, lastIndex);
-				if( lastIndex != -1){
+				if ( lastIndex != -1) {
 					int f = rez.indexOf("[",lastIndex), l = rez.indexOf("#>",lastIndex);
 					if (l != -1 && (f == -1 || f > l)) { // We are inside an anchor already
 						lastIndex += m.anchor_text.length();

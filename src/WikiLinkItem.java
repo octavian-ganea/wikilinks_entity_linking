@@ -51,15 +51,23 @@ public class WikiLinkItem {
 				boolean wasSpace = (i > 0 && all_text.charAt(i-1) == ' ');
 
 				i = all_text.indexOf("]]]",i) + "]]]".length();
-				if (wasSpace && all_text.charAt(i) == ' ') i++;
-				if (all_text.charAt(i) == ' ') mentionOffset++;
+				if (wasSpace && all_text.charAt(i) == ' ') {
+				    i++;
+				}
+				if (all_text.charAt(i) == ' ') {
+				    mentionOffset++;
+				}
 				
 				int j = all_text.indexOf("[[[end", i);
-				for (;i<j;++i) sb.append(all_text.charAt(i));
+				for (;i<j;++i) {
+				    sb.append(all_text.charAt(i));
+				}
 				
 				wasSpace = (all_text.charAt(j-1) == ' ');
 				i = all_text.indexOf("]]]",j) + "]]]".length() - 1;
-				if (wasSpace && i < all_text.length() - 1 && all_text.charAt(i) == ' ') i++;
+				if (wasSpace && i < all_text.length() - 1 && all_text.charAt(i) == ' ') {
+				    i++;
+				}
 				
 				mentions.get(mentionIndex).text_offset = mentionOffset;
 			} else {

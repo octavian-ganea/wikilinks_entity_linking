@@ -27,9 +27,9 @@ public class AnnotateSentFromCurrentPage implements AnnotateSentences {
 		
 		for (Mention m : mentions.values()) {
 			int lastIndex = 0;
-			while(lastIndex != -1){
+			while (lastIndex != -1) {
 				lastIndex = rez.indexOf(m.anchor_text, lastIndex);
-				if( lastIndex != -1){
+				if ( lastIndex != -1){
 					int f = rez.indexOf("[",lastIndex), l = rez.indexOf("#>",lastIndex);
 					if (l != -1 && (f == -1 || f > l)) { // We are inside an anchor already
 						lastIndex += m.anchor_text.length();
@@ -43,7 +43,9 @@ public class AnnotateSentFromCurrentPage implements AnnotateSentences {
 						sb.append(rez.substring(lastIndex + m.anchor_text.length()));
 						rez = sb.toString();
 						nr_anchors ++;
-						if (m.freebase_id == null) nr_null_freebase_ids++;
+						if (m.freebase_id == null) {
+						    nr_null_freebase_ids++;
+						}
 
 						lastIndex += m.anchor_text.length() + 1 + t.length();
 					}

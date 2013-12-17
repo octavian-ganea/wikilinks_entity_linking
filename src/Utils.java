@@ -66,7 +66,9 @@ public class Utils {
 		public int compare(String o1, String o2) {
 			// Try to match longer anchor texts first. For example: "University of Oklahoma" will be replaced
 			// with its anchor before it will be "Oklahoma".
-			if (o1.length() - o2.length() != 0) return o2.length() - o1.length();
+			if (o1.length() - o2.length() != 0) {
+			    return o2.length() - o1.length();
+			}
 			return o2.compareTo(o1);
 		}
 	}
@@ -74,8 +76,9 @@ public class Utils {
 	static 	public boolean isWordSeparator(char c) {
 		if (c == ' ' || c == ',' || c == '"' || c == ':' || c == '.' || c == '?' || c == '!' || c == '(' ||
 				c == ')' || c == '[' || c == ']' || c == '+' || c == '=' || c == '\'' || c == '`' || c == '\n' ||
-				c == '\r' || c == ';' || c =='#' || Character.isWhitespace(c) || Character.isSpace(c))
-			return true;
+				c == '\r' || c == ';' || c =='#' || Character.isWhitespace(c) || Character.isSpace(c)) {
+		    return true;
+		}
 		return false;
 	}
 	
@@ -94,60 +97,45 @@ public class Utils {
 		return true;
 	}
 	
-
-	
-	static 	public boolean isWordSeparatorInTheSameSentence(char c) {
-		if (c == ' ' || c == '\'' || Character.isWhitespace(c) || Character.isSpace(c))
-			return true;
-		return false;
-	}
-	
 	
 	// Returns all sub-token spans of t=n-,n,n+ that contain n.
 	// n is the token starting at offset from text.
-	static public Vector<TokenSpan> getTokenSpans(String text, int offset) {
+	static public Vector<TokenSpan> getTokenSpans(String text, int offset, int length) {
 		Vector<TokenSpan> spans = new Vector<TokenSpan>();
 		
-		if (offset < 0 || offset >= text.length()) return spans;
-		int startN = offset;
-		
-		int i = offset;
-		while (i < text.length() && !isWordSeparator(text.charAt(i))) i++;
-		int endN = i-1;
-		
-		i = startN - 1;
-		while (i >= 0 && isWordSeparator(text.charAt(i))) {
-			if (!isWordSeparatorInTheSameSentence(text.charAt(i))) {
-				i = startN;
-				break;
-			}
-			i--;
+		if (offset < 0 || offset >= text.length()) {
+		    return spans;
 		}
+		int startN = offset;
+		int endN = offset + length - 1;
 		
 		// Start index of n-
-		int startMinusN = i;
-		if (i < startN) {
-			while(i >= 0 && !isWordSeparator(text.charAt(i))) i--;
-			i++;
-			startMinusN = i;
+		int i = startN - 1;
+		while (i >= 0 && isWordSeparator(text.charAt(i))) {
+		    i--;
+		}
+
+        int startMinusN = startN;
+		if (i >= 0) {
+		    while (i >= 0 && !isWordSeparator(text.charAt(i))) {
+	            i--;
+	        }
+		    startMinusN = i+1;
 		}
 		
-		i = endN + 1;
-		while (i < text.length() && isWordSeparator(text.charAt(i))) {
-			if (!isWordSeparatorInTheSameSentence(text.charAt(i))) {
-				i = endN;
-				break;
-			}
-			i++;
-		}
-		
-		// End index of the last char of n+
-		int endPlusN=i;
-		if (i > endN) {
-			while(i < text.length() && !isWordSeparator(text.charAt(i))) i++;
-			i--;
-			endPlusN = i;
-		}
+	    // End index of the last char of n+
+        i = endN + 1;
+        while (i < text.length() && isWordSeparator(text.charAt(i))) {
+            i++;
+        }
+
+        int endPlusN = endN;
+        if (i < text.length()) {
+            while (i < text.length() && !isWordSeparator(text.charAt(i))) {
+                i++;
+            }
+            endPlusN = i-1;
+        }
 		
 		// n
 		spans.add(new TokenSpan(startN, endN+1));

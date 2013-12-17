@@ -9,7 +9,9 @@ public class Mention {
 	String freebase_id = null;
 	String anchor_text = null;
 	
+	// The index from the page's text before removing the tags [[[start num]]]
 	int old_text_offset = -1;
+    // The index from the page's clean text after removing the tags [[[start num]]]
 	int text_offset = -1;
 	
 	// e.g. http://en.wikipedia.org/wiki/Pharoahe_Monch; /m/03f5_l2 --> Pharoahe Monch
@@ -27,7 +29,7 @@ public class Mention {
 	}
 	
 	public String toString() {
-		return wiki_url + "; " + freebase_id + " --> " + anchor_text + " ------- ";
+		return wiki_url + "; " + freebase_id + " --> " + anchor_text + " ------- offset= " + text_offset;
 	}
 	
 	public Mention clone() {

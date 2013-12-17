@@ -16,7 +16,9 @@ public class Part2 {
 	// Part 2 : extract a set with all entities from the Wikilinks corpus and their doc frequencies
 	// CODE : get mentions for each item; add to a file pair (wikipedia url without wikipedia.org/wiki/, #docs)
 	public static void _2_shard_main(String dir_file) throws IOException {		
-		if (!dir_file.endsWith("/")) dir_file += "/";
+		if (!dir_file.endsWith("/")) {
+		    dir_file += "/";
+		}
 		File dir = new File(dir_file);
 		if(dir.isDirectory()==false){
 			System.out.println("Directory does not exists : " + dir_file);
@@ -24,7 +26,9 @@ public class Part2 {
 		}
 		String[] list = dir.list();
 		for (String filename : list) {
-			if (!filename.endsWith(".data")) continue;		
+			if (!filename.endsWith(".data")) {
+			    continue;		
+			}
 			WikilinksParser p = new WikilinksParser(dir_file + filename);
 			
 			HashMap<String, Integer> freq_map = new HashMap<String, Integer>();
@@ -66,18 +70,22 @@ public class Part2 {
 	// Code to merge all shards into a final file with (url, doc freq)
 	// Input: directory that contains all *._2_shard files
 	public static void _2_merge_main(String dir_file, String out_file) throws IOException {
-		if (!dir_file.endsWith("/")) dir_file += "/";
+		if (!dir_file.endsWith("/")) {
+		    dir_file += "/";
+		}
 		int total_nr_docs = 0;
 		HashMap<String, Integer> freq_map = new HashMap<String, Integer>();
 		
 		File dir = new File(dir_file);
-		if(dir.isDirectory()==false){
+		if (dir.isDirectory()==false){
 			System.out.println("Directory does not exists : " + dir_file);
 			return;
 		}
 		String[] list = dir.list();
 		for (String filename : list) {
-			if (!filename.endsWith("._2_shard")) continue;
+			if (!filename.endsWith("._2_shard")) {
+			    continue;
+			}
 			BufferedReader in = new BufferedReader(new FileReader(dir_file + filename));
 			String next_line = in.readLine();
 			while (!next_line.startsWith("NR DOCS:")) {

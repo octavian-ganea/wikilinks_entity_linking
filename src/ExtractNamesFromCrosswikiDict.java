@@ -27,7 +27,9 @@ public class ExtractNamesFromCrosswikiDict {
 				continue;
 			}
 			String name = st.nextToken();
-			if (name.length() == 0) continue;
+			if (name.length() == 0) {
+			    continue;
+			}
 			
 			if (last_name == null || last_name.compareTo(name) != 0) {
 				System.out.println(name);

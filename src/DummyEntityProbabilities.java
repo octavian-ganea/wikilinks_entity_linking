@@ -40,15 +40,19 @@ public class DummyEntityProbabilities {
 		System.err.println("Done loading all names.");
 		
 		System.err.println("Parsing the corpus files and computing probabilities ...");		
-		if (!corpusDirectory.endsWith("/")) corpusDirectory += "/";
+		if (!corpusDirectory.endsWith("/")) {
+		    corpusDirectory += "/";
+		}
 		File dir = new File(corpusDirectory);
-		if(dir.isDirectory()==false){
+		if(dir.isDirectory()==false) {
 			System.err.println("[FATAL] Directory does not exists : " + corpusDirectory);
 			return;
 		}
 		String[] list = dir.list();
 		for (String filename : list) {
-			if (!filename.endsWith(".data")) continue;
+			if (!filename.endsWith(".data")) {
+			    continue;
+			}
 			System.err.println("Processing file " + corpusDirectory + filename);
 			WikilinksParser p = new WikilinksParser(corpusDirectory + filename);
 			int nr_page = -1;
