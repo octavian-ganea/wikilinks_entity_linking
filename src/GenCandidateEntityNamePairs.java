@@ -285,7 +285,11 @@ public class GenCandidateEntityNamePairs {
     // score(candidate,E) = score(e,n,E) =  numerator(n,e,E) / (denominator(n,e,E) + p(dummy|n)/(1 - p(dummy|n))))
     // Compute also debug values for candidate: 
     //    - dummyPosteriorProb = score(dummy,n,E) = p(dummy|n) / ((1-p(dummy|n)) * (numerator(n,e,E)+denominator(n,e,E)))
-    private static void ComputeSimpleScoreForOneCandidate(Candidate cand, HashSet<String> docEntities) {		
+    private static void ComputeSimpleScoreForOneCandidate(
+            Candidate cand, 
+            HashSet<String> docEntities,
+            boolean withDummyEnt) {
+        
         double numerator = dict.get(cand.name).get(cand.entityURL);
         numerator *= totalNumDocs / allEntsFreqs.get(cand.entityURL);
 
@@ -294,7 +298,8 @@ public class GenCandidateEntityNamePairs {
 
         // Insert dummy probabilities: p(dummy | n) / (1 - p(dummy|n))
         double dummyContributionProb = 0.0;
-        if (dummyProbabilities.containsKey(cand.name)) {
+        
+        if (withDummyEnt && dummyProbabilities.containsKey(cand.name)) {
             DummyIntPair dp = dummyProbabilities.get(cand.name);
             if (dp.numDocsWithAnchorName == 0) {
                 dummyContributionProb = Double.POSITIVE_INFINITY;
@@ -303,6 +308,7 @@ public class GenCandidateEntityNamePairs {
                     (dp.numDocsWithName - dp.numDocsWithAnchorName + 0.0) / dp.numDocsWithAnchorName;
             }
         }
+        
 
         if (denominator + dummyContributionProb == 0) {
             cand.posteriorProb = Double.POSITIVE_INFINITY;
@@ -323,12 +329,13 @@ public class GenCandidateEntityNamePairs {
     private static void GenWinningEntities(
             WikiLinkItem i,
             Vector<Candidate> candidates,
-            HashSet<String> docEntities) {
+            HashSet<String> docEntities,
+            boolean includeDummyEnt) {
         
         HashSet<String> serializedMentions = new HashSet<String>();
         for (Mention m : i.mentions) {
             if (m.text_offset >= 0) {
-                serializedMentions.add(m.wiki_url + "\t" + m.anchor_text.trim() + "\t" + m.text_offset);
+                serializedMentions.add(m.wiki_url + "\t" + m.anchor_text + "\t" + m.text_offset);
             }
         }
         
@@ -346,7 +353,7 @@ public class GenCandidateEntityNamePairs {
                 continue;
             }
 
-            ComputeSimpleScoreForOneCandidate(cand, docEntities);
+            ComputeSimpleScoreForOneCandidate(cand, docEntities, includeDummyEnt);
 
             String key = cand.textIndex + "\t" + cand.name;
             if ((!winners.containsKey(key) || winners.get(key).posteriorProb < cand.posteriorProb)) {	
@@ -383,11 +390,12 @@ public class GenCandidateEntityNamePairs {
             if (c.debug.dummyPosteriorProb > 0 && c.debug.dummyPosteriorProb >= c.posteriorProb) {
                 System.out.println("## DUMMY BETTER THAN ALL CANDIDATES ### ");
             } else {
-                if (serializedMentions.contains(c.entityURL +"\t" + c.name.trim() + "\t" + c.textIndex)) {
+                String key = c.entityURL +"\t" + c.name + "\t" + c.textIndex;      
+                if (serializedMentions.contains(key)) {
                     System.out.println("## GOOD RESULT ##");
                 }
             }
-        }		
+        }
     }
 
 
@@ -404,13 +412,13 @@ public class GenCandidateEntityNamePairs {
     private static void GenWinningEntitiesWithExtendedTokenSpan(
             WikiLinkItem i,
             Vector<Candidate> candidates,
-            HashSet<String> docEntities) {
+            HashSet<String> docEntities,
+            boolean includeDummyEnt) {
 
-        int nrCorrectMatchingsFromWiklinksMentions = 0;
         HashSet<String> serializedMentions = new HashSet<String>();
         for (Mention m : i.mentions) {
             if (m.text_offset >= 0) {
-                serializedMentions.add(m.wiki_url + "\t" + m.anchor_text.trim() + "\t" + m.text_offset);
+                serializedMentions.add(m.wiki_url + "\t" + m.anchor_text + "\t" + m.text_offset);
             }
         }
         
@@ -430,11 +438,12 @@ public class GenCandidateEntityNamePairs {
         }
 
         // This is used just to know if a winner was printed or not.
+        // The same (e,n,offset) might be discovered from multiple candidates in this token span approach.
         HashSet<String> winners = new HashSet<String>();
         
         // for each (n, offset):
         for (String key : namesOfCandidates) {
-            String name = key.substring(0, key.lastIndexOf('\t')).trim();
+            String name = key.substring(0, key.lastIndexOf('\t'));
             int offset = Integer.parseInt(key.substring(name.length() + 1));
 
             // Set of all entities e' from all pairs (n',e') with p(n'|e') >= theta and n' \in t=n-,n,n+
@@ -517,7 +526,7 @@ public class GenCandidateEntityNamePairs {
                 continue;
             }
 
-            String winnerKey = winnerURL + "\t" + winnerName.trim() + "\t" + winnerOffset;
+            String winnerKey = winnerURL + "\t" + winnerName + "\t" + winnerOffset;
             if (winners.contains(winnerKey)) {
                 continue;
             }
@@ -541,15 +550,12 @@ public class GenCandidateEntityNamePairs {
             
             if (serializedMentions.contains(winnerKey)) {
                 System.out.println("## GOOD RESULT ##");
-                nrCorrectMatchingsFromWiklinksMentions++;
             }
-        }
-        
-        if (nrCorrectMatchingsFromWiklinksMentions < i.mentions.size()) {
-            System.out.println("## PAGE WITH LESS MATCHINGS ##");
         }
     }
 
+    // Main function that generates the candidates and selects the highest scored ones.
+    // Supports both simple and extended token span implementations with dummy entity or not.
     public static void run(
             String prunnedInvdictFilename, 
             String dictFilename, 
@@ -557,7 +563,8 @@ public class GenCandidateEntityNamePairs {
             String dummyProbsFilename,
             Double theta, 
             String webpagesFilename,
-            boolean extendedTokenSpan) throws IOException, InterruptedException {
+            boolean extendedTokenSpan,
+            boolean includeDummyEnt) throws IOException, InterruptedException {
 
         System.out.println("loading inv index P(n|e) ...");
         LoadInvdict(prunnedInvdictFilename);
@@ -596,9 +603,11 @@ public class GenCandidateEntityNamePairs {
         LoadAllEntities(allEntitiesFilename);
         System.out.println("All ents size : " + allEntsFreqs.size() + " ; total num docs = " + totalNumDocs);
 
-        System.out.println("loading dummy probs P(M.ent != dummy| M.ent = n) index...");
-        LoadDummyProbs(dummyProbsFilename);
-        System.out.println("Done. Size = " + dummyProbabilities.size());
+        if (includeDummyEnt) {
+            System.out.println("loading dummy probs P(M.ent != dummy| M.ent = n) index...");
+            LoadDummyProbs(dummyProbsFilename);
+            System.out.println("Done. Size = " + dummyProbabilities.size());
+        }
 
         // ***** STAGE 2: Compute the l(n,e) values, group by n and find the winning candidate.
         System.out.println("Winner entities:");
@@ -622,9 +631,9 @@ public class GenCandidateEntityNamePairs {
                 System.out.println("## MENTION ## " + m);
             }
             if (extendedTokenSpan) {
-                GenWinningEntitiesWithExtendedTokenSpan(i, allCandidates.get(nr_page), docEntities);
+                GenWinningEntitiesWithExtendedTokenSpan(i, allCandidates.get(nr_page), docEntities, includeDummyEnt);
             } else {
-                GenWinningEntities(i, allCandidates.get(nr_page), docEntities);
+                GenWinningEntities(i, allCandidates.get(nr_page), docEntities, includeDummyEnt);
             }
         }
     }
