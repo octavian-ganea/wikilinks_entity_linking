@@ -15,56 +15,42 @@ import java.util.Map.Entry;
 public class Part2 {
 	// Part 2 : extract a set with all entities from the Wikilinks corpus and their doc frequencies
 	// CODE : get mentions for each item; add to a file pair (wikipedia url without wikipedia.org/wiki/, #docs)
-	public static void _2_shard_main(String dir_file) throws IOException {		
-		if (!dir_file.endsWith("/")) {
-		    dir_file += "/";
-		}
-		File dir = new File(dir_file);
-		if(dir.isDirectory()==false){
-			System.out.println("Directory does not exists : " + dir_file);
-			return;
-		}
-		String[] list = dir.list();
-		for (String filename : list) {
-			if (!filename.endsWith(".data")) {
-			    continue;		
-			}
-			WikilinksParser p = new WikilinksParser(dir_file + filename);
-			
-			HashMap<String, Integer> freq_map = new HashMap<String, Integer>();
-			
-			int doc_index = 0;
-			while (p.hasMoreItems()) {
-				doc_index++;
-				WikiLinkItem i = p.nextItem();
-				
-				HashSet<String> hs = new HashSet<String>();
-				for (Mention m : i.mentions) {
-					if (m.wiki_url.length() > 0)
-						hs.add(m.wiki_url);
-				}
-				
-				Iterator<String> it = hs.iterator();
-				while(it.hasNext()) {
-					String url = it.next();
-					if (!freq_map.containsKey(url)) {
-						freq_map.put(url, 0);
-					}
-					freq_map.put(url, freq_map.get(url) + 1);
-				}
-			}
-			
-			// Write data to output file:
-			PrintWriter writer = new PrintWriter(dir_file + filename + "._2_shard", "UTF-8");
-			for (Entry<String, Integer> e : freq_map.entrySet()) {
-				writer.println(e.getKey() + "\t" + e.getValue());
-			}
-			writer.println("NR DOCS:");
-			writer.println(doc_index);
-			writer.flush();
-			writer.close();
-		}
-	}	
+    public static void _2_shard_main(String filename, String outputfile) throws IOException {		
+        WikilinksParser p = new WikilinksParser(filename);
+
+        HashMap<String, Integer> freq_map = new HashMap<String, Integer>();
+
+        int doc_index = 0;
+        while (p.hasMoreItems()) {
+            doc_index++;
+            WikiLinkItem i = p.nextItem();
+
+            HashSet<String> hs = new HashSet<String>();
+            for (Mention m : i.mentions) {
+                if (m.wiki_url.length() > 0)
+                    hs.add(m.wiki_url);
+            }
+
+            Iterator<String> it = hs.iterator();
+            while(it.hasNext()) {
+                String url = it.next();
+                if (!freq_map.containsKey(url)) {
+                    freq_map.put(url, 0);
+                }
+                freq_map.put(url, freq_map.get(url) + 1);
+            }
+        }
+
+        // Write data to output file:
+        PrintWriter writer = new PrintWriter(outputfile, "UTF-8");
+        for (Entry<String, Integer> e : freq_map.entrySet()) {
+            writer.println(e.getKey() + "\t" + e.getValue());
+        }
+        writer.println("NR DOCS:");
+        writer.println(doc_index);
+        writer.flush();
+        writer.close();
+    }	
 	
 
 	// Code to merge all shards into a final file with (url, doc freq)
@@ -73,15 +59,22 @@ public class Part2 {
 		if (!dir_file.endsWith("/")) {
 		    dir_file += "/";
 		}
-		int total_nr_docs = 0;
-		HashMap<String, Integer> freq_map = new HashMap<String, Integer>();
 		
 		File dir = new File(dir_file);
-		if (dir.isDirectory()==false){
-			System.out.println("Directory does not exists : " + dir_file);
-			return;
+		if(dir.isDirectory()==false) {
+		    System.out.println("Directory does not exists : " + dir_file);
+		    return;
 		}
 		String[] list = dir.list();
+		for (String filename : list) {
+		    if (!filename.endsWith(".data")) {
+		        continue;       
+		    }
+		    _2_shard_main(filename, dir_file + filename + "._2_shard");
+		}
+	        
+		int total_nr_docs = 0;
+		HashMap<String, Integer> freq_map = new HashMap<String, Integer>();
 		for (String filename : list) {
 			if (!filename.endsWith("._2_shard")) {
 			    continue;

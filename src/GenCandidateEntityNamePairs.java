@@ -4,14 +4,21 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
 import java.util.Vector;
+
+import edu.stanford.nlp.ling.CoreLabel;
+import edu.stanford.nlp.process.CoreLabelTokenFactory;
+import edu.stanford.nlp.process.PTBTokenizer;
+import edu.stanford.nlp.process.WordToSentenceProcessor;
 
 class Candidate {
     String entityURL;
@@ -65,7 +72,7 @@ public class GenCandidateEntityNamePairs {
     private static HashMap<String, DummyIntPair> dummyProbabilities = null;
 
     // all Wikipedia entities (excluding redirects)
-    // allEntsFreqs[name] = doc_frequency
+    // allEntsFreqs[url] = doc_frequency
     private static HashMap<String, Integer> allEntsFreqs = null;
 
     // Total number of docs from the Wikilinks corpus.
@@ -84,7 +91,7 @@ public class GenCandidateEntityNamePairs {
 
     //////////////// Methods ////////////////////////////////////////////////////////////////////////////
 
-    private static void LoadInvdict(String filename) throws IOException{
+    private static void LoadAndPruneInvdict(String filename) throws IOException{
         // <url><tab><cprob><space><string>[<tab><score>[<space><score>]*]
 
         invdict =  new HashMap<String, TreeMap<String, Double>>();
@@ -111,6 +118,11 @@ public class GenCandidateEntityNamePairs {
             double cprob = Double.parseDouble(left.substring(0,left.indexOf(" ")));				
             String mention = left.substring(left.indexOf(" ") + 1);			
 
+            if (!allEntsFreqs.containsKey(Utils.pruneURL(url)) || cprob < 0.0001) {
+                line = in.readLine();
+                continue;
+            }
+            
             if (!invdict.containsKey(url)) {
                 invdict.put(url, new TreeMap<String, Double>());
             }
@@ -129,7 +141,7 @@ public class GenCandidateEntityNamePairs {
         int nr_line = 0;
         while (line != null && line.length() > 3) {
             if (nr_line % 10000000 == 0) {
-                System.out.println("loaded " + nr_line);
+                System.err.println("loaded " + nr_line);
             }
             nr_line ++;
             StringTokenizer st = new StringTokenizer(line, "\t");
@@ -259,6 +271,9 @@ public class GenCandidateEntityNamePairs {
     // This does not use the dummy entity.
     private static double ComputeDenominator(String name, String entity, HashSet<String> docEntities) {
         double denominator = 0.0;
+        if (!dict.containsKey(name)) {
+            return 0;
+        }
         Set<Entry<String,Double>> set = dict.get(name).entrySet();
         for (Entry<String, Double> entry : set) {
             String url = entry.getKey();
@@ -404,17 +419,21 @@ public class GenCandidateEntityNamePairs {
      *** retain the set of (name, page_offset) for each page
      *** for each (n, offset): 
      ***   - compute the set (n',e') with p(n'|e') >= theta and n' \in t=n-,n,n+
-     ***   - for each such e' compute l(n'\in t, e')
+     ***   - for each such e' compute l(n' \in t, e')
      ***   - retain the highest scored e'
      ***   - compute the name n' \in t with the highest p(n'|e')
      ***   - output winning pair (n',e') - print it and print debug info
+     *
+     *  Returns a set of winning candidates.   
      */
-    private static void GenWinningEntitiesWithExtendedTokenSpan(
+    private static Vector<Candidate> GenWinningEntitiesWithExtendedTokenSpan(
             WikiLinkItem i,
             Vector<Candidate> candidates,
             HashSet<String> docEntities,
             boolean includeDummyEnt) {
 
+        Vector<Candidate> winnerMatchings = new Vector<Candidate>();
+        
         HashSet<String> serializedMentions = new HashSet<String>();
         for (Mention m : i.mentions) {
             if (m.text_offset >= 0) {
@@ -442,7 +461,7 @@ public class GenCandidateEntityNamePairs {
         HashSet<String> winners = new HashSet<String>();
         
         // for each (n, offset):
-        for (String key : namesOfCandidates) {
+        for (String key : namesOfCandidates) {            
             String name = key.substring(0, key.lastIndexOf('\t'));
             int offset = Integer.parseInt(key.substring(name.length() + 1));
 
@@ -471,21 +490,32 @@ public class GenCandidateEntityNamePairs {
             for (String entity : possibleEntities) {
                 double numerator = 0.0;
                 double denominator = 0.0;
+                
                 for (TokenSpan ts : surroundingTokenSpans) {
                     // extract n'
                     String extendedName = i.all_text.substring(ts.start, ts.end);
+                    
+                    // If p(entity | extendedName) == 0 or does not exist
                     if (!dict.containsKey(extendedName)) {
                         continue;
                     }
-                    denominator += ComputeDenominator(extendedName, entity, docEntities);
+                    
+                    // p(dummy | name)
+                    double dummyProb = 0;
+                    if (includeDummyEnt && dummyProbabilities.containsKey(extendedName)) {
+                        DummyIntPair dp = dummyProbabilities.get(extendedName);
+                        dummyProb = 1 - (dp.numDocsWithAnchorName + 0.0) / dp.numDocsWithName;
+                    }
+                    
+                    denominator += ComputeDenominator(extendedName, entity, docEntities) * (1 - dummyProb) + dummyProb;
                     
                     // if P(extendedName | entity) = 0 , we ignore this candidate.
                     if (!dict.get(extendedName).containsKey(entity)) {
                         continue;
                     }
-                    numerator += dict.get(extendedName).get(entity) * totalNumDocs / allEntsFreqs.get(entity);
+                    numerator += dict.get(extendedName).get(entity) * totalNumDocs/allEntsFreqs.get(entity) * (1-dummyProb);
                 }
-                
+
                 double score;
                 if (numerator == 0) {
                     continue;
@@ -496,12 +526,40 @@ public class GenCandidateEntityNamePairs {
                 else {
                     score = numerator / denominator;
                 }
-                
+
                 if (score > winnerScore) {
                     winnerScore = score;
                     winnerURL = entity;
                 }
             }
+            
+            // Compute dummy entity score l(n \in t, dummy)
+            double dummyScore = 0.0;            
+            if (includeDummyEnt) {
+                double dummyNumerator = 0.0;
+                double dummyDenominator = 0.0;
+
+                for (TokenSpan ts : surroundingTokenSpans) {
+                    String extendedName = i.all_text.substring(ts.start, ts.end);
+                    
+                    double dummyProb = 0.0;
+                    if (dummyProbabilities.containsKey(extendedName)) {
+                        DummyIntPair dp = dummyProbabilities.get(extendedName);
+                        dummyProb = 1 - (dp.numDocsWithAnchorName + 0.0) / dp.numDocsWithName;
+                    }
+                    dummyNumerator += dummyProb;
+                    dummyDenominator += (1 - dummyProb) * ComputeDenominator(extendedName, "", docEntities);
+                }
+                                
+                if (dummyNumerator > 0) {
+                    if (dummyDenominator == 0) {
+                        dummyScore = Double.POSITIVE_INFINITY;
+                    }
+                    else {
+                        dummyScore = dummyNumerator / dummyDenominator;
+                    }
+                }
+            }      
             
             String winnerName = "";
             double winnerNameCondProbability = 0.0;
@@ -527,15 +585,19 @@ public class GenCandidateEntityNamePairs {
             }
 
             String winnerKey = winnerURL + "\t" + winnerName + "\t" + winnerOffset;
+
             if (winners.contains(winnerKey)) {
                 continue;
             }
             winners.add(winnerKey);
             
+            /*
             // Print winner and some debug values:
             System.out.println();
-            System.out.println("entity=" + winnerURL + "; candidate_name=" + name + "; matched_name=" + winnerName + "; page offset=" + winnerOffset);
-            System.out.println("; P(n|e)=" + winnerNameCondProbability + " ; winner entity score=" + winnerScore);
+            System.out.print("entity=" + winnerURL + "; candidate_name=" + name + "; matched_name=" + winnerName);
+            System.out.println("; page offset=" + winnerOffset);
+            System.out.print("; P(n|e)=" + winnerNameCondProbability + " ; winner entity score l(n \\in t, e)=");
+            System.out.println(winnerScore + "; l(n \\in t, dummy)=" + dummyScore);
 
             int start = winnerOffset - 50;
             if (start < 0) {
@@ -548,16 +610,61 @@ public class GenCandidateEntityNamePairs {
 
             System.out.println(";context=" + i.all_text.substring(start, end).replace('\n', ' '));
             
-            if (serializedMentions.contains(winnerKey)) {
-                System.out.println("## GOOD RESULT ##");
+            
+            if (dummyScore > 0 && dummyScore <= winnerScore) {
+                System.out.println("## DUMMY WORSE THAN ME ### ");
+            }
+
+            if (dummyScore > 0 && dummyScore > winnerScore) {
+                System.out.println("## DUMMY BETTER THAN ALL CANDIDATES ### ");
+            } else {
+                if (serializedMentions.contains(winnerKey)) {
+                    System.out.println("## GOOD RESULT ##");
+                }
+            }
+            */
+            
+            if (dummyScore <= 0 || dummyScore <= winnerScore) {
+                Candidate c = new Candidate(winnerURL, null, winnerName, winnerOffset, -1);
+                c.posteriorProb = winnerScore;
+                winnerMatchings.add(c);
             }
         }
+        
+        return winnerMatchings;
     }
 
+    
+    static public Vector<String> extractSentencesWithStanfordNLP(String text) {
+        Vector<String> rez = new Vector<String>();
+        StringTokenizer st = new StringTokenizer(text, "\n");
+        while (st.hasMoreTokens()) {
+            String par = st.nextToken();
+            int dot = par.lastIndexOf('.');
+            int exclm = par.lastIndexOf('!');
+            int interog = par.lastIndexOf('?');
+            int x = Math.max(dot, exclm);
+            x = Math.max(x, interog);
+            if (x == -1) continue;
+            par = par.substring(0, x+1);
+            if (par.contains(" ")) {
+                PTBTokenizer ptbt = new PTBTokenizer(
+                        new StringReader(par), new CoreLabelTokenFactory(), "ptb3Escaping=false");
+
+                List<List<CoreLabel>> sents = (new WordToSentenceProcessor()).process(ptbt.tokenize());
+                for (List<CoreLabel> sent : sents) {
+                    StringBuilder sb = new StringBuilder("");
+                    for (CoreLabel w : sent) sb.append(w + " ");
+                    rez.add(sb.toString());
+                }               
+            }           
+        }
+        return rez;
+    }
     // Main function that generates the candidates and selects the highest scored ones.
     // Supports both simple and extended token span implementations with dummy entity or not.
     public static void run(
-            String prunnedInvdictFilename, 
+            String invdictFilename, 
             String dictFilename, 
             String allEntitiesFilename, 
             String dummyProbsFilename,
@@ -566,21 +673,25 @@ public class GenCandidateEntityNamePairs {
             boolean extendedTokenSpan,
             boolean includeDummyEnt) throws IOException, InterruptedException {
 
-        System.out.println("loading inv index P(n|e) ...");
-        LoadInvdict(prunnedInvdictFilename);
-        System.out.println("Done loading index. Size = " + invdict.size());
+        System.err.println("loading all entities...");
+        LoadAllEntities(allEntitiesFilename);
+        System.err.println("All ents size : " + allEntsFreqs.size() + " ; total num docs = " + totalNumDocs);
+
+        System.err.println("loading and prunning inv index P(n|e) ...");
+        LoadAndPruneInvdict(invdictFilename);
+        System.err.println("Done loading index. Size = " + invdict.size());
 
         // ***** STAGE 1: Generate all candidate pairs (n,e) such that P(n|e) >= theta
         HashSet<String> allCandidateNames = new HashSet<String>();
         Vector<Vector<Candidate>> allCandidates = new Vector<Vector<Candidate>>();
 
-        System.out.println("Generating all candidates and their names ...");
+        System.err.println("Generating all candidates and their names ...");
         WikilinksParser p = new WikilinksParser(webpagesFilename);
         int nr_page = -1;
         while (p.hasMoreItems()) {
             nr_page++;
             if (nr_page % 1000 == 0) {
-                System.out.println(nr_page);
+                System.err.println(nr_page);
             }
             WikiLinkItem i = p.nextItem();
 
@@ -590,27 +701,23 @@ public class GenCandidateEntityNamePairs {
                 allCandidateNames.add(cand.name);
             }
         }
-        System.out.println("Done. Num all candidate names = " + allCandidateNames.size());
+        System.err.println("Done. Num all candidate names = " + allCandidateNames.size());
 
         // Free memory:
         invdict = null;
 
-        System.out.println("loading dict P(e|n) index...");
+        System.err.println("loading dict P(e|n) index...");
         LoadDict(dictFilename, allCandidateNames);
-        System.out.println("Done. Size = " + dict.size());
-
-        System.out.println("loading all entities...");
-        LoadAllEntities(allEntitiesFilename);
-        System.out.println("All ents size : " + allEntsFreqs.size() + " ; total num docs = " + totalNumDocs);
+        System.err.println("Done. Size = " + dict.size());
 
         if (includeDummyEnt) {
-            System.out.println("loading dummy probs P(M.ent != dummy| M.ent = n) index...");
+            System.err.println("loading dummy probs P(M.ent != dummy| M.ent = n) index...");
             LoadDummyProbs(dummyProbsFilename);
-            System.out.println("Done. Size = " + dummyProbabilities.size());
+            System.err.println("Done. Size = " + dummyProbabilities.size());
         }
 
         // ***** STAGE 2: Compute the l(n,e) values, group by n and find the winning candidate.
-        System.out.println("Winner entities:");
+        System.err.println("Winner entities:");
         p = new WikilinksParser(webpagesFilename);
         nr_page = -1;
         while (p.hasMoreItems()) {
@@ -627,11 +734,113 @@ public class GenCandidateEntityNamePairs {
                 }
             }			
 
+            HashMap<String,String> wikiFreebaseMap = new HashMap<String,String>();
+            
             for (Mention m : i.mentions) {
-                System.out.println("## MENTION ## " + m);
+              //  System.out.println("## MENTION ## " + m);
+                wikiFreebaseMap.put(m.wiki_url, m.freebase_id);
             }
+            
             if (extendedTokenSpan) {
-                GenWinningEntitiesWithExtendedTokenSpan(i, allCandidates.get(nr_page), docEntities, includeDummyEnt);
+                Vector<Candidate> matchings = 
+                    GenWinningEntitiesWithExtendedTokenSpan(i, allCandidates.get(nr_page), docEntities, includeDummyEnt);
+                
+                TreeMap<Integer, Candidate> sortedByOffsetMatchings = new TreeMap<Integer, Candidate>();
+                for (Candidate c : matchings) {
+                    if (wikiFreebaseMap.containsKey(c.entityURL)) {
+                        c.freebaseID = wikiFreebaseMap.get(c.entityURL);
+                    }
+                    if (!sortedByOffsetMatchings.containsKey(c.textIndex) ||
+                            sortedByOffsetMatchings.get(c.textIndex).name.length() < c.name.length()) {
+                        sortedByOffsetMatchings.put(c.textIndex, c);
+                    }
+                }
+                Vector<Candidate> finalMatchings = new Vector<Candidate>();
+                for (Candidate c : sortedByOffsetMatchings.values()) {
+                    if (finalMatchings.isEmpty()) {
+                        finalMatchings.add(c);
+                    } else {
+                        Candidate last = finalMatchings.lastElement(); 
+                        if (last.textIndex + last.name.length() <= c.textIndex) {
+                            finalMatchings.add(c);
+                        }
+                    }
+                }
+                
+                int finalMatchingsIndex = 0;
+                if (finalMatchings.size() == 0) continue;
+                Candidate currentCandidate = finalMatchings.get(finalMatchingsIndex);
+                
+                StringBuilder allTextBuilder = new StringBuilder();
+                for (int off = 0; off < i.all_text.length(); off++) {
+                    if (currentCandidate != null && currentCandidate.textIndex == off) {
+                        allTextBuilder.append("[[[]]]" + currentCandidate.name + "{{{" + finalMatchingsIndex + "}}}");
+
+                        off += currentCandidate.name.length() - 1;
+                        
+                        finalMatchingsIndex++;
+                        if (finalMatchings.size() == finalMatchingsIndex) {
+                            currentCandidate = null;
+                        } else {
+                            currentCandidate = finalMatchings.get(finalMatchingsIndex);                            
+                        }
+                    } else {
+                        allTextBuilder.append(i.all_text.charAt(off));
+                    }
+                }
+                
+                // Use Stanford NLP framework to extract sentences from the text.
+                Vector<String> properSentences = extractSentencesWithStanfordNLP(allTextBuilder.toString());
+                
+                for (String sentence : properSentences) {
+                    if (sentence.contains("[ [ [") && sentence.contains("] ] ]")) {
+                        if (sentence.indexOf("{ { {") <= sentence.indexOf("[ [ [") ||
+                                sentence.lastIndexOf("{ { {") <= sentence.lastIndexOf("[ [ [") ) {
+                            continue;
+                        }
+                        
+                        StringBuilder sb = new StringBuilder();
+                        boolean good = true; 
+                        for (int off = 0; off < sentence.length(); off++) {
+                            if (off + "{ { {".length() <= sentence.length() &&
+                                    sentence.substring(off, off + "{ { {".length()).compareTo("{ { {") == 0) {
+                                
+                                if (sentence.indexOf("} } }", off) < 0) {
+                                    good = false;
+                                    break;
+                                }
+                                int index = Integer.parseInt(
+                                        sentence.substring(
+                                                off + "{ { {".length(), 
+                                                sentence.indexOf("} } }", off)).trim());
+                                
+                                currentCandidate = finalMatchings.get(index);
+                                
+                                if (sb.length() > 0 && sb.charAt(sb.length() - 1) == ' ') {
+                                    sb.replace(sb.length() - 1, sb.length(), "");
+                                }
+                                
+                                sb.append("{{{" + currentCandidate.posteriorProb + ";" + 
+                                        currentCandidate.freebaseID + ";wiki/" + currentCandidate.entityURL + "}}} ");
+                                
+                                off = sentence.indexOf("} } }", off) + "} } }".length();
+                            } else if (off + "[ [ [".length() <= sentence.length() &&
+                                    sentence.substring(off, off + "[ [ [".length()).compareTo("[ [ [") == 0) {
+                                sb.append("[[[]]]");
+                                
+                                if (sentence.indexOf("] ] ]", off) < 0) {
+                                    good = false;
+                                    break;
+                                }
+                                off = sentence.indexOf("] ] ]", off) + "] ] ]".length();
+                            } else {
+                                sb.append(sentence.charAt(off));
+                            }
+                        }
+
+                        if (good) System.out.println(sb.toString());
+                    }
+                }
             } else {
                 GenWinningEntities(i, allCandidates.get(nr_page), docEntities, includeDummyEnt);
             }

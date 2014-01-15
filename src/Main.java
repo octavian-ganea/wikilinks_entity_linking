@@ -26,29 +26,19 @@ public class Main {
 		
 		// Part 2 : extract a set with all entities from the Wikilinks corpus (*.data file)
 		// together with their doc frequencies
-		// INPUT: args[0] = directory that contains all *.data files	
+		// INPUT: args[0] = directory that contains all *.data files OR single input *.data file	
 		// OUTPUT: args[1] = file with (url, doc freq) 
-		//         args[2] = [all_corpus_ents]
-		if (args.length == 3 && args[2].compareTo("[all_corpus_ents]") == 0) {
-		    Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");    
-			Part2._2_shard_main(args[0]);
-			Part2._2_merge_main(args[0], args[1]);
-			return;
-		}		
-		
-		// Code to prune the dictionary index of P(e|n) or the inv.dict of P(n|e).
-		// INPUT: args[0] = file that contains dict or invdict;
-        //        args[1] = file with all entities obtained by running [2]
-		//        args[3] = [prune_dict] or [prune_invdict]
-		// OUTPUT: args[2]
-		if (args.length == 4 && args[3].compareTo("[prune_dict]") == 0) {
-		    Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");    
-			Part3._3_prune_dict(args[0], args[1], args[2]);
-		}	
-		if (args.length == 4 && args[3].compareTo("[prune_invdict]") == 0) {
-		    Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");    
-			Part3._3_prune_invdict(args[0], args[1], args[2]);
-		}	
+		// args[2] = [file_ents]
+		if (args.length == 3 && args[2].compareTo("[file_ents]") == 0) {
+		    Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");  
+		    
+		    // args[0] is a single .data file
+			Part2._2_shard_main(args[0], args[1]);
+			
+			// Uncomment the next line to generate the (url, doc freq)  for the entire Wikilinks corpus
+			// args[0] is a directory
+//			Part2._2_merge_main(args[0], args[1]);
+		}
 					
 		// Extract a set of all names from the dictionary.
 		// Input: args[0] = dictionary file
@@ -71,15 +61,16 @@ public class Main {
 		
 		
 		// Main functionality of the code that implements the name-entity matching algorithms from the papers.
-		// Input: args[0] = prunned inv.dict P(n|e) containing just entities from the shard file we look at
+		// Input: args[0] = complete inv.dict file P(n|e)
 		//        args[1] = complete dict file P(e|n) 
-		//        args[2] = all entities file generated from [2]
-		//        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n)
+		//        args[2] = all entities file generated with [file_ents] from args[5]
+		//        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n) from [dummy_probs]
 		//        args[4] = theta
 		//        args[5] = input WikiLinkItems shard file of the Wikilinks corpus
 		//        args[6] = [simple] or [extended-token-span]
 		//        args[7] = [dummy] or [no-dummy]
 		//        args[8] = [run_main]
+		// OUTPUT: stdout
 		if (args.length == 9 && args[8].compareTo("[run_main]") == 0) {
 		    if (args[7].compareTo("[dummy]") != 0 && args[7].compareTo("[no-dummy]") != 0) {
 		        System.err.println("Invalid param " + args[7]);
@@ -95,60 +86,6 @@ public class Main {
 					args[0], args[1], args[2], args[3], 
 					Double.parseDouble(args[4]), args[5],
 					args[6].contains("[extended-token-span]"), !args[7].contains("[no-dummy]"));
-		}		
-
-		
-	}
-	///////////////////////////////////////////////////////////////////////
-	
-
-	public static void thrift_main(String[] args) throws IOException {		
-		boolean create_index_from_termdocid_pairs = false;
-		if (create_index_from_termdocid_pairs) {
-			InvertedIndex.createDistributedIndexFromTermDocidPairs();
-			return;
 		}
-
-		
-		// Number of mentions coming with each WikiLinkItem object. 
-		int total_num_raw_mentions = 0;
-
-		boolean annotate_from_current_page = false;		
-		boolean annotate_from_all_pages_index = true;
-		
-		WikilinksParser p = new WikilinksParser(args[0]);
-
-		boolean write_term_docids = false;
-		if (write_term_docids) {
-			InvertedIndex.outputTermDocidPairs(p);
-			return;
-		}
-
-		AnnotateSentences annotator = null;
-		if (annotate_from_current_page) {
-			annotator = new AnnotateSentFromCurrentPage();
-		}
-		if (annotate_from_all_pages_index) {
-			annotator = new AnnotateSentFromAllPagesIndex("inverted_index_v2/index_shards/");
-		}
-		
-		// ---------------- Parsing input data ----------------------
-		while (p.hasMoreItems()) {
-			WikiLinkItem i = p.nextItem();
-			total_num_raw_mentions += i.mentions.size();
-			
-			annotator.annotateSentences(i);
-		}
-		// ----------------------------------------------------------
-
-		System.out.println("Num raw mentions: " + total_num_raw_mentions);
-
-		if (annotate_from_current_page) {
-			System.out.println("Total num local matched entities: ");
-		}
-		if (annotate_from_all_pages_index) {
-			System.out.println("Total num mentions from inverted index: ");
-		}
-		System.out.println(annotator.getTotalNumAnnotations());
 	}
 }
