@@ -140,7 +140,7 @@ public class GenCandidateEntityNamePairs {
         String line = in.readLine();
         int nr_line = 0;
         while (line != null && line.length() > 3) {
-            if (nr_line % 10000000 == 0) {
+            if (nr_line % 20000000 == 0) {
                 System.err.println("loaded " + nr_line);
             }
             nr_line ++;
@@ -690,7 +690,7 @@ public class GenCandidateEntityNamePairs {
         int nr_page = -1;
         while (p.hasMoreItems()) {
             nr_page++;
-            if (nr_page % 1000 == 0) {
+            if (nr_page % 10000 == 0) {
                 System.err.println(nr_page);
             }
             WikiLinkItem i = p.nextItem();
@@ -809,10 +809,21 @@ public class GenCandidateEntityNamePairs {
                                     good = false;
                                     break;
                                 }
-                                int index = Integer.parseInt(
+                                int index = -1;
+                                try {
+                                    index = Integer.parseInt(
                                         sentence.substring(
                                                 off + "{ { {".length(), 
                                                 sentence.indexOf("} } }", off)).trim());
+                                } catch (NumberFormatException e) {
+                                    sb.append(sentence.charAt(off));
+                                    continue;
+                                }
+                                
+                                if (index == -1 || index >= finalMatchings.size()) {
+                                    sb.append(sentence.charAt(off));
+                                    continue;
+                                }
                                 
                                 currentCandidate = finalMatchings.get(index);
                                 
