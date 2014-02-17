@@ -1,9 +1,9 @@
+package entity_linking;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.StringTokenizer;
-import java.util.TreeMap;
 
 
 // Extracts all the distinct names from p(e|n) dictionary.
@@ -13,13 +13,13 @@ public class ExtractAllNamesFromCrosswikiDict {
 		// <string><tab><cprob><space><url>
 		BufferedReader in = new BufferedReader(new FileReader(filename));
 		String line = in.readLine();
-		int nr_line = 0;
+		int nrLine = 0;
 		
 		String last_name = null;
 		while (line != null && line.length() > 3) {
-			if (nr_line % 5000000 == 0)
-				System.err.println("loaded " + nr_line);
-			nr_line ++;
+			if (nrLine % 5000000 == 0)
+				System.err.println("loaded " + nrLine);
+			nrLine ++;
 			StringTokenizer st = new StringTokenizer(line, "\t");
 
 			if (!st.hasMoreTokens()) {

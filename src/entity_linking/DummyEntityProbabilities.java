@@ -1,11 +1,12 @@
+package entity_linking;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-
+import entity_linking.input_data_pipeline.*;
 
 // Computes p(M.ent!=dummy | n ) = 1 - p(M.ent=dummy | n) probabilities for all names n by looking at
 // all files from the Wikilinks corpus and counting the number of docs where n the anchor text of an 
@@ -62,11 +63,11 @@ public class DummyEntityProbabilities {
 					System.err.println("page nr " + nr_page);
 				}
 				
-				WikiLinkItem i = p.nextItem();
+				WikilinksSinglePage i = p.nextItem();
 				
 				HashSet<String> mentionNames = new HashSet<String>();
-				for (Mention m : i.mentions) {
-					mentionNames.add(m.anchor_text);
+				for (TruthMention m : i.truthMentions) {
+					mentionNames.add(m.anchorText);
 				}
 				for (String s : mentionNames) {
 					if (allNames.containsKey(s)) {
@@ -76,8 +77,8 @@ public class DummyEntityProbabilities {
 				
 				HashSet<String> docWords = new HashSet<String>();
 				StringBuilder sbOneWord = new StringBuilder();
-				for (int j = 0; j < i.all_text.length(); ++j) {
-					char c = i.all_text.charAt(j);
+				for (int j = 0; j < i.getRawText().length(); ++j) {
+					char c = i.getRawText().charAt(j);
 					if (Utils.isWordSeparator(c)) {
 						if (sbOneWord.length() > 0) {
 							docWords.add(sbOneWord.toString());

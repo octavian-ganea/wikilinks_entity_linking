@@ -1,5 +1,6 @@
+package entity_linking;
+
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -51,7 +52,6 @@ public class Utils {
 		
 		final_url = final_url.replace(' ', '_');
 		StringBuilder sb = new StringBuilder();
-		boolean good = true;
 		for (char c : final_url.toCharArray()) {
 			if (!Character.isSpace(c)) {
 				sb.append(c);

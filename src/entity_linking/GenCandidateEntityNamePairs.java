@@ -1,3 +1,5 @@
+package entity_linking;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -19,6 +21,8 @@ import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.process.CoreLabelTokenFactory;
 import edu.stanford.nlp.process.PTBTokenizer;
 import edu.stanford.nlp.process.WordToSentenceProcessor;
+
+import entity_linking.input_data_pipeline.*;
 
 class Candidate {
     String entityURL;
@@ -176,7 +180,6 @@ public class GenCandidateEntityNamePairs {
         allEntsFreqs = new HashMap<String, Integer>();
         BufferedReader in = new BufferedReader(new FileReader(filename));
         String line = in.readLine();
-        int nr_line = 0;
         while (!line.startsWith("NR DOCS:")) {
             StringTokenizer st = new StringTokenizer(line, "\t");
             String url = st.nextToken();
@@ -215,12 +218,12 @@ public class GenCandidateEntityNamePairs {
 
 
     // For a given Webpage, select all candidate pairs (n,e) such that P(n|e) >= theta
-    private static Vector<Candidate> GenAllCandidates(WikiLinkItem i, double theta) {
+    private static Vector<Candidate> GenAllCandidates(WikilinksSinglePage i, double theta) {
         Vector<Candidate> currentPageCandidates = new Vector<Candidate>();
         HashSet<String> hs = new HashSet<String>();
-        for (Mention m : i.mentions) {
-            if (m.wiki_url.length() > 0) {
-                hs.add(m.wiki_url);
+        for (TruthMention m : i.truthMentions) {
+            if (m.wikiUrl.length() > 0) {
+                hs.add(m.wikiUrl);
             }
         }
 
@@ -240,17 +243,17 @@ public class GenCandidateEntityNamePairs {
                         continue;
                     }
 
-                    int index = i.all_text.indexOf(name);
+                    int index = i.getRawText().indexOf(name);
 
                     while (index != -1) {
                         // Keep just candidates that are separate words.
-                        if (index > 0 && !Utils.isWordSeparator(i.all_text.charAt(index-1))) {
-                            index = i.all_text.indexOf(name, index + 1);
+                        if (index > 0 && !Utils.isWordSeparator(i.getRawText().charAt(index-1))) {
+                            index = i.getRawText().indexOf(name, index + 1);
                             continue;
                         }
-                        if (index + name.length() < i.all_text.length() &&
-                                !Utils.isWordSeparator(i.all_text.charAt(index + name.length()))) {
-                            index = i.all_text.indexOf(name, index + 1);
+                        if (index + name.length() < i.getRawText().length() &&
+                                !Utils.isWordSeparator(i.getRawText().charAt(index + name.length()))) {
+                            index = i.getRawText().indexOf(name, index + 1);
                             continue;
                         }
 
@@ -259,7 +262,7 @@ public class GenCandidateEntityNamePairs {
 
                        // System.out.println("# CANDIDATE # -- url="+url+" name="+name+"::: index=" + index);
 
-                        index = i.all_text.indexOf(name, index + 1);							
+                        index = i.getRawText().indexOf(name, index + 1);							
                     }
                 }
             }
@@ -342,20 +345,20 @@ public class GenCandidateEntityNamePairs {
     // ** for each candidate - compute posterior probability and keep the highest scored one for each (offset,name)
     // ** for each winner candidate - print it and print debug info
     private static void GenWinningEntities(
-            WikiLinkItem i,
+            WikilinksSinglePage i,
             Vector<Candidate> candidates,
             HashSet<String> docEntities,
             boolean includeDummyEnt) {
         
         HashSet<String> serializedMentions = new HashSet<String>();
-        for (Mention m : i.mentions) {
-            if (m.text_offset >= 0) {
-                serializedMentions.add(m.wiki_url + "\t" + m.anchor_text + "\t" + m.text_offset);
+        for (TruthMention m : i.truthMentions) {
+            if (m.mentionOffsetInText >= 0) {
+                serializedMentions.add(m.wikiUrl + "\t" + m.anchorText + "\t" + m.mentionOffsetInText);
             }
         }
         
-        // Winning candidates grouped by their starting index in all_text
-        // Key of the hash map: all_text offset + "\t" + name
+        // Winning candidates grouped by their starting index in allAnnotatedText
+        // Key of the hash map: allAnnotatedText offset + "\t" + name
         HashMap<String, Candidate> winners = new HashMap<String,Candidate>();
 
         // For each candidate, compute the score as described in formula (8).
@@ -363,7 +366,7 @@ public class GenCandidateEntityNamePairs {
             if (!dict.containsKey(cand.name)) {
                 continue;
             }
-            // if P(cand.wiki_url | cand.name) = 0 , we ignore this candidate.
+            // if P(cand.wikiUrl | cand.name) = 0 , we ignore this candidate.
             if (!dict.get(cand.name).containsKey(cand.entityURL)) {
                 continue;
             }
@@ -392,11 +395,11 @@ public class GenCandidateEntityNamePairs {
                 start = 0;
             }
             int end = c.textIndex + 50;
-            if (end >= i.all_text.length()) {
-                end = i.all_text.length() - 1;
+            if (end >= i.getRawText().length()) {
+                end = i.getRawText().length() - 1;
             }
 
-            System.out.println(";context=" + i.all_text.substring(start, end).replace('\n', ' '));
+            System.out.println(";context=" + i.getRawText().substring(start, end).replace('\n', ' '));
 
             if (c.debug.dummyPosteriorProb > 0 && c.debug.dummyPosteriorProb < c.posteriorProb) {
                 System.out.println("## DUMMY WORSE THAN ME ### ");
@@ -427,7 +430,7 @@ public class GenCandidateEntityNamePairs {
      *  Returns a set of winning candidates.   
      */
     private static Vector<Candidate> GenWinningEntitiesWithExtendedTokenSpan(
-            WikiLinkItem i,
+            WikilinksSinglePage i,
             Vector<Candidate> candidates,
             HashSet<String> docEntities,
             boolean includeDummyEnt) {
@@ -435,13 +438,13 @@ public class GenCandidateEntityNamePairs {
         Vector<Candidate> winnerMatchings = new Vector<Candidate>();
         
         HashSet<String> serializedMentions = new HashSet<String>();
-        for (Mention m : i.mentions) {
-            if (m.text_offset >= 0) {
-                serializedMentions.add(m.wiki_url + "\t" + m.anchor_text + "\t" + m.text_offset);
+        for (TruthMention m : i.truthMentions) {
+            if (m.mentionOffsetInText >= 0) {
+                serializedMentions.add(m.wikiUrl + "\t" + m.anchorText + "\t" + m.mentionOffsetInText);
             }
         }
         
-        // Key of the hash map: name + "\t" + all_text offset
+        // Key of the hash map: name + "\t" + allAnnotatedText offset
         HashSet<String> namesOfCandidates = new HashSet<String>();
         // Key of the hash map: name
         HashMap<String,Vector<Candidate>> indexOfCandidates = new HashMap<String,Vector<Candidate>>();
@@ -469,10 +472,10 @@ public class GenCandidateEntityNamePairs {
             HashSet<String> possibleEntities = new HashSet<String>();
             
             // for each n' \in t=n-,n,n+
-            Vector<TokenSpan> surroundingTokenSpans = Utils.getTokenSpans(i.all_text, offset, name.length());
+            Vector<TokenSpan> surroundingTokenSpans = Utils.getTokenSpans(i.getRawText(), offset, name.length());
             for (TokenSpan ts : surroundingTokenSpans) {
                 // extract n'
-                String extendedName = i.all_text.substring(ts.start, ts.end);
+                String extendedName = i.getRawText().substring(ts.start, ts.end);
                 
                 // for each (n',e') with p(n'|e') >= theta and n' \in t=n-,n,n+
                 if (!indexOfCandidates.containsKey(extendedName)) {
@@ -493,7 +496,7 @@ public class GenCandidateEntityNamePairs {
                 
                 for (TokenSpan ts : surroundingTokenSpans) {
                     // extract n'
-                    String extendedName = i.all_text.substring(ts.start, ts.end);
+                    String extendedName = i.getRawText().substring(ts.start, ts.end);
                     
                     // If p(entity | extendedName) == 0 or does not exist
                     if (!dict.containsKey(extendedName)) {
@@ -540,7 +543,7 @@ public class GenCandidateEntityNamePairs {
                 double dummyDenominator = 0.0;
 
                 for (TokenSpan ts : surroundingTokenSpans) {
-                    String extendedName = i.all_text.substring(ts.start, ts.end);
+                    String extendedName = i.getRawText().substring(ts.start, ts.end);
                     
                     double dummyProb = 0.0;
                     if (dummyProbabilities.containsKey(extendedName)) {
@@ -566,7 +569,7 @@ public class GenCandidateEntityNamePairs {
             int winnerOffset = -1;
             for (TokenSpan ts : surroundingTokenSpans) {
                 // extract n'
-                String extendedName = i.all_text.substring(ts.start, ts.end);
+                String extendedName = i.getRawText().substring(ts.start, ts.end);
                 // for each (n',e') with p(n'|e') >= theta and n' \in t=n-,n,n+
                 if (!indexOfCandidates.containsKey(extendedName)) {
                     continue;
@@ -604,11 +607,11 @@ public class GenCandidateEntityNamePairs {
                 start = 0;
             }
             int end = winnerOffset + 50;
-            if (end >= i.all_text.length()) {
-                end = i.all_text.length() - 1;
+            if (end >= i.allAnnotatedText.length()) {
+                end = i.allAnnotatedText.length() - 1;
             }
 
-            System.out.println(";context=" + i.all_text.substring(start, end).replace('\n', ' '));
+            System.out.println(";context=" + i.allAnnotatedText.substring(start, end).replace('\n', ' '));
             
             
             if (dummyScore > 0 && dummyScore <= winnerScore) {
@@ -693,7 +696,7 @@ public class GenCandidateEntityNamePairs {
             if (nr_page % 10000 == 0) {
                 System.err.println(nr_page);
             }
-            WikiLinkItem i = p.nextItem();
+            WikilinksSinglePage i = p.nextItem();
 
             Vector<Candidate> thisPageCandidates = GenAllCandidates(i, theta);
             allCandidates.add(thisPageCandidates);
@@ -724,21 +727,21 @@ public class GenCandidateEntityNamePairs {
             nr_page++;
             System.out.println("------- Page: " + nr_page);
 
-            WikiLinkItem i = p.nextItem();
+            WikilinksSinglePage i = p.nextItem();
 
             // compute M.doc.E
             HashSet<String> docEntities = new HashSet<String>();
-            for (Mention m : i.mentions) {
-                if (m.wiki_url.length() > 0) {
-                    docEntities.add(m.wiki_url);
+            for (TruthMention m : i.truthMentions) {
+                if (m.wikiUrl.length() > 0) {
+                    docEntities.add(m.wikiUrl);
                 }
             }			
 
             HashMap<String,String> wikiFreebaseMap = new HashMap<String,String>();
             
-            for (Mention m : i.mentions) {
+            for (TruthMention m : i.truthMentions) {
               //  System.out.println("## MENTION ## " + m);
-                wikiFreebaseMap.put(m.wiki_url, m.freebase_id);
+                wikiFreebaseMap.put(m.wikiUrl, m.freebaseId);
             }
             
             if (extendedTokenSpan) {
@@ -772,7 +775,7 @@ public class GenCandidateEntityNamePairs {
                 Candidate currentCandidate = finalMatchings.get(finalMatchingsIndex);
                 
                 StringBuilder allTextBuilder = new StringBuilder();
-                for (int off = 0; off < i.all_text.length(); off++) {
+                for (int off = 0; off < i.getRawText().length(); off++) {
                     if (currentCandidate != null && currentCandidate.textIndex == off) {
                         allTextBuilder.append("[[[]]]" + currentCandidate.name + "{{{" + finalMatchingsIndex + "}}}");
 
@@ -785,7 +788,7 @@ public class GenCandidateEntityNamePairs {
                             currentCandidate = finalMatchings.get(finalMatchingsIndex);                            
                         }
                     } else {
-                        allTextBuilder.append(i.all_text.charAt(off));
+                        allTextBuilder.append(i.getRawText().charAt(off));
                     }
                 }
                 

@@ -1,3 +1,5 @@
+package entity_linking;
+
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.File;
@@ -118,7 +120,7 @@ public class AuxCode {
     public static void prune_index_main(String[] args) throws IOException, InterruptedException {  
         // Code to prune the dictionary index of P(e|n) or the inv.dict of P(n|e).
         // INPUT: args[0] = file that contains dict or invdict;
-        //        args[1] = file with all entities obtained by running [file_ents]
+        //        args[1] = file with all entities obtained by running [ExtractEntsWithFreq]
         //        args[3] = [prune_dict] or [prune_invdict]
         // OUTPUT: args[2]
         if (args.length == 4 && args[3].compareTo("[prune_dict]") == 0) {

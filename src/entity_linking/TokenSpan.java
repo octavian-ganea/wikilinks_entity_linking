@@ -1,3 +1,4 @@
+package entity_linking;
 
 public class TokenSpan {
 	int start;
