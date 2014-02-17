@@ -8,8 +8,8 @@ import java.util.TreeMap;
 
 // Extracts all the distinct names from p(e|n) dictionary.
 // We actually used just the one token names from the entire set of names.
-public class ExtractNamesFromCrosswikiDict {
-	public static void extract(String filename)  throws IOException{
+public class ExtractAllNamesFromCrosswikiDict {
+	public static void run(String filename)  throws IOException{
 		// <string><tab><cprob><space><url>
 		BufferedReader in = new BufferedReader(new FileReader(filename));
 		String line = in.readLine();

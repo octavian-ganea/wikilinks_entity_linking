@@ -24,28 +24,30 @@ public class Main {
 	///////////////////// MAIN ////////////////////////////////////////////
 	public static void main(String[] args) throws Exception {
 		
-		// Part 2 : extract a set with all entities from the Wikilinks corpus (*.data file)
+		// Extract a set with all entities from the Wikilinks corpus (*.data file)
 		// together with their doc frequencies
 		// INPUT: args[0] = directory that contains all *.data files OR single input *.data file	
 		// OUTPUT: args[1] = file with (url, doc freq) 
-		// args[2] = [file_ents]
-		if (args.length == 3 && args[2].compareTo("[file_ents]") == 0) {
+		// args[2] = [ExtractEntsWithFreq]
+		if (args.length == 3 && args[2].compareTo("[ExtractEntsWithFreq]") == 0) {
 		    Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");  
 		    
 		    // args[0] is a single .data file
-			Part2._2_shard_main(args[0], args[1]);
+		    ExtractEntsWithFreq.fromFile(args[0], args[1]);
 			
 			// Uncomment the next line to generate the (url, doc freq)  for the entire Wikilinks corpus
-			// args[0] is a directory
-//			Part2._2_merge_main(args[0], args[1]);
+			// args[0] is a directory containing .data files
+//			ExtractEntsWithFreq.fromDir(args[0], args[1]);
+		    return;
 		}
 					
-		// Extract a set of all names from the dictionary.
+		// Extracts all the distinct one-token names from p(e|n) dictionary.
 		// Input: args[0] = dictionary file
-		//        args[1] = [dict-names]
-		if (args.length == 2 && args[1].compareTo("[dict_names]") == 0) {
+		//        args[1] = [ExtractAllNamesFromCrosswikiDict]
+		if (args.length == 2 && args[1].compareTo("[ExtractAllNamesFromCrosswikiDict]") == 0) {
 		    Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");    
-			ExtractNamesFromCrosswikiDict.extract(args[0]);
+			ExtractAllNamesFromCrosswikiDict.run(args[0]);
+			return;
 		}
 		
 		// Computes p(dummy | n) probabilities for all names n by looking at all files from the
@@ -57,6 +59,7 @@ public class Main {
 		if (args.length == 3 && args[2].compareTo("[dummy_probs]") == 0) {
 		    Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");    
 			DummyEntityProbabilities.compute(args[0], args[1]);
+			return;
 		}		
 		
 		
@@ -86,6 +89,9 @@ public class Main {
 					args[0], args[1], args[2], args[3], 
 					Double.parseDouble(args[4]), args[5],
 					args[6].contains("[extended-token-span]"), !args[7].contains("[no-dummy]"));
+			return;
 		}
+		
+		System.err.println("[ERROR] Invalid command line parameters.");
 	}
 }

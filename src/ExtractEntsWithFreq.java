@@ -12,10 +12,10 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 
 
-public class Part2 {
+public class ExtractEntsWithFreq {
 	// Part 2 : extract a set with all entities from the Wikilinks corpus and their doc frequencies
-	// CODE : get mentions for each item; add to a file pair (wikipedia url without wikipedia.org/wiki/, #docs)
-    public static void _2_shard_main(String filename, String outputfile) throws IOException {		
+	// CODE : get mentions for each item; add to a file pair (wikipedia url, #docs)
+    public static void fromFile(String filename, String outputfile) throws IOException {		
         WikilinksParser p = new WikilinksParser(filename);
 
         HashMap<String, Integer> freq_map = new HashMap<String, Integer>();
@@ -55,7 +55,7 @@ public class Part2 {
 
 	// Code to merge all shards into a final file with (url, doc freq)
 	// Input: directory that contains all *._2_shard files
-	public static void _2_merge_main(String dir_file, String out_file) throws IOException {
+	public static void fromDir(String dir_file, String out_file) throws IOException {
 		if (!dir_file.endsWith("/")) {
 		    dir_file += "/";
 		}
@@ -70,7 +70,7 @@ public class Part2 {
 		    if (!filename.endsWith(".data")) {
 		        continue;       
 		    }
-		    _2_shard_main(filename, dir_file + filename + "._2_shard");
+		    fromFile(filename, dir_file + filename + "._2_shard");
 		}
 	        
 		int total_nr_docs = 0;
