@@ -22,9 +22,9 @@ public class ExtractEntsWithFreq {
         HashMap<String, Integer> freqMap = new HashMap<String, Integer>();
 
         int doc_index = 0;
-        while (p.hasMoreItems()) {
+        while (p.hasNext()) {
             doc_index++;
-            WikilinksSinglePage i = p.nextItem();
+            WikilinksSinglePage i = p.next();
 
             HashSet<String> hs = new HashSet<String>();
             for (TruthMention m : i.truthMentions) {

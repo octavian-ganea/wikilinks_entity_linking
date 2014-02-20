@@ -24,6 +24,14 @@ public class TruthMention {
 		wikiUrl = Utils.pruneURL(wikiUrl);
 	}
 	
+	public TruthMention(String wikiUrl, String freebaseID, String anchorText, int mentionOffsetInText) {
+	    wikiUrl = Utils.pruneURL(wikiUrl);
+	    this.wikiUrl = wikiUrl;
+	    this.freebaseId = freebaseID;
+	    this.anchorText = anchorText;
+	    this.mentionOffsetInText = mentionOffsetInText;
+	}
+	
 	public String toString() {
 		return wikiUrl + "; " + freebaseId + " --> " + anchorText + " ------- offset= " + mentionOffsetInText;
 	}

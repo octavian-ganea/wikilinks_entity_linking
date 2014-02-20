@@ -14,6 +14,8 @@ public class Utils {
 	private static HashMap<String,String> wikiRedirects = null;
 	
 	public static void loadWikiRedirects(String filename) throws IOException {
+       System.err.println("[INFO] Loading Wikipedia redirects...");
+
 		wikiRedirects = new HashMap<String,String>();
 		
 		if (new java.io.File(filename).exists() == false) {
@@ -28,9 +30,14 @@ public class Utils {
 			wikiRedirects.put(st.nextToken(), st.nextToken());
 			line = in.readLine();
 		}
+		System.err.println("[INFO] Done loading Wikipedia redirects.");
 	}
 	
 	public static String pruneURL(String s) {
+	    if (wikiRedirects == null) {
+	        System.err.println("[FATAL] The Wikipedia redirects file was not loaded.");
+	        System.exit(1);
+	    }
 		String url = s.trim();
 		if (url.contains("wiki/")) {
 			url = url.substring(url.lastIndexOf("wiki/") + "wiki/".length());

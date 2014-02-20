@@ -1,0 +1,1 @@
+java -cp "lib/*" entity_linking.Main ~/crosswiki/inv.dict ~/crosswiki/dict entsWithDocFrequencies/_2_merge_full_corpus dummyData/all_dummy_probs 0.0001 evalData/IITB/CSAW_Annotations.xml evalData/IITB/crawledDocs [extended-token-span] [dummy] [IITB-testing] > iitb.out

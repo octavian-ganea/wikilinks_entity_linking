@@ -65,7 +65,7 @@ public class GenCandidateEntityNamePairs {
     // invdict[url] = treemap<name, cprob>
     private static HashMap<String, TreeMap<String, Double>> invdict = null;
 
-    // invdict: P(n|e)
+    // dict: P(e|n)
     // dict [name] = treemap<url, cprob>
     private static HashMap<String, TreeMap<String, Double>> dict = null;
 
@@ -94,9 +94,48 @@ public class GenCandidateEntityNamePairs {
     }
 
     //////////////// Methods ////////////////////////////////////////////////////////////////////////////
+    private static void LoadAllEntities(String filename) throws IOException {
+        System.err.println("[INFO] Loading all entities...");
 
-    private static void LoadAndPruneInvdict(String filename) throws IOException{
+        allEntsFreqs = new HashMap<String, Integer>();
+        BufferedReader in = new BufferedReader(new FileReader(filename));
+        String line = in.readLine();
+        while (!line.startsWith("NR DOCS:")) {
+            StringTokenizer st = new StringTokenizer(line, "\t");
+            String url = st.nextToken();
+            if (!st.hasMoreTokens()) {
+                System.err.println("[ERROR] wrong line format in all entities file :" + line + "::::::");
+                line = in.readLine();
+                continue;
+            }
+            int freq = Integer.parseInt(st.nextToken());
+            allEntsFreqs.put(url, freq);
+            line = in.readLine();
+        }
+        totalNumDocs = Integer.parseInt(in.readLine());
+
+        System.err.println("[INFO] All ents size : " + allEntsFreqs.size() + " ; total num docs = " + totalNumDocs);
+    }
+    
+    private static HashSet<String> GetAllEntitiesFromAllPages(GenericPagesIterator pagesIterator) {
+        HashSet<String> allEntitiesFromAllPages = new HashSet<String>();
+       
+        while (pagesIterator.hasNext()) {
+            GenericSinglePage i = pagesIterator.next();
+            for (TruthMention m : i.truthMentions) {
+                allEntitiesFromAllPages.add(m.wikiUrl);
+            }
+        }
+        
+        System.err.println("[INFO] Number of all entities from all input docs = " + allEntitiesFromAllPages.size());
+        return allEntitiesFromAllPages;
+    }
+ 
+    // invdict: P(n|e)
+    private static void LoadAndPruneInvdict(String filename, HashSet<String> allEntitiesFromAllPages) throws IOException{
         // <url><tab><cprob><space><string>[<tab><score>[<space><score>]*]
+
+        System.err.println("[INFO] Loading and prunning inv.dict P(n|e) ...");
 
         invdict =  new HashMap<String, TreeMap<String, Double>>();
         BufferedReader in = new BufferedReader(new FileReader(filename));
@@ -104,6 +143,9 @@ public class GenCandidateEntityNamePairs {
         int nr_line = 0;
         while (line != null && line.length() > 3) {
             nr_line ++;
+            if (nr_line % 20000000 == 0) {
+                System.err.println("loaded " + nr_line);
+            }
             StringTokenizer st = new StringTokenizer(line, "\t");
 
             if (!st.hasMoreTokens()) {
@@ -122,7 +164,7 @@ public class GenCandidateEntityNamePairs {
             double cprob = Double.parseDouble(left.substring(0,left.indexOf(" ")));				
             String mention = left.substring(left.indexOf(" ") + 1);			
 
-            if (!allEntsFreqs.containsKey(Utils.pruneURL(url)) || cprob < 0.0001) {
+            if (!allEntitiesFromAllPages.contains(url) || cprob < 0.0001) {
                 line = in.readLine();
                 continue;
             }
@@ -135,10 +177,16 @@ public class GenCandidateEntityNamePairs {
             line = in.readLine();
         }
         in.close();		
+
+        System.err.println("[INFO] Done loading index. Size = " + invdict.size());
     }	
 
-    private static void LoadDict(String filename, HashSet<String> allCandidateNames) throws IOException{
+    // dict: P(e|n)
+    private static void LoadAndPruneDict(String filename, HashSet<String> allCandidateNames) throws IOException{
         // <string><tab><cprob><space><url>
+        
+        System.err.println("[INFO] Loading and prunning dict P(e|n) ...");
+
         dict =  new HashMap<String, TreeMap<String, Double>>();
         BufferedReader in = new BufferedReader(new FileReader(filename));
         String line = in.readLine();
@@ -174,28 +222,13 @@ public class GenCandidateEntityNamePairs {
             line = in.readLine();
         }
         in.close();		
+
+        System.err.println("[INFO] Done. Size = " + dict.size());
     }	
 
-    private static void LoadAllEntities(String filename) throws IOException {
-        allEntsFreqs = new HashMap<String, Integer>();
-        BufferedReader in = new BufferedReader(new FileReader(filename));
-        String line = in.readLine();
-        while (!line.startsWith("NR DOCS:")) {
-            StringTokenizer st = new StringTokenizer(line, "\t");
-            String url = st.nextToken();
-            if (!st.hasMoreTokens()) {
-                System.err.println("[ERROR] wrong line format in all entities file :" + line + "::::::");
-                line = in.readLine();
-                continue;
-            }
-            int freq = Integer.parseInt(st.nextToken());
-            allEntsFreqs.put(url, freq);
-            line = in.readLine();
-        }
-        totalNumDocs = Integer.parseInt(in.readLine());
-    }
-
     private static void LoadDummyProbs(String dummyProbsFilename) throws IOException {
+        System.err.println("[INFO] Loading dummy probs P(M.ent != dummy| M.ent = n) index...");
+
         dummyProbabilities = new HashMap<String, DummyIntPair>();
         BufferedReader in = new BufferedReader(new FileReader(dummyProbsFilename));
         String line = in.readLine();
@@ -214,24 +247,30 @@ public class GenCandidateEntityNamePairs {
             }
             line = in.readLine();
         }		
+
+        System.err.println("[INFO] Done. Size = " + dummyProbabilities.size());
     }
 
-
     // For a given Webpage, select all candidate pairs (n,e) such that P(n|e) >= theta
-    private static Vector<Candidate> GenAllCandidates(WikilinksSinglePage i, double theta) {
-        Vector<Candidate> currentPageCandidates = new Vector<Candidate>();
-        HashSet<String> hs = new HashSet<String>();
+    private static int GenAllCandidatesFromOnePage(GenericSinglePage i, double theta, Vector<Candidate> outputCandidates) {
+        int nrTruthCorrectCandidates = 0;
+        
+        HashSet<String> setOfUrls = new HashSet<String>();
         for (TruthMention m : i.truthMentions) {
             if (m.wikiUrl.length() > 0) {
-                hs.add(m.wikiUrl);
+                setOfUrls.add(m.wikiUrl);
             }
         }
 
-        Iterator<String> it = hs.iterator();		
+        Iterator<String> it = setOfUrls.iterator();		
         while(it.hasNext()) {
             String url = it.next();
 
             if (!invdict.containsKey(url)) {
+                System.out.println("NOT IN INVDICT " + url);
+                if (!allEntsFreqs.containsKey(Utils.pruneURL(url))) {
+                    System.out.println("AND NOT IN ALL ENTS FREQS");
+                }
                 continue;
             }
 
@@ -256,19 +295,77 @@ public class GenCandidateEntityNamePairs {
                             index = i.getRawText().indexOf(name, index + 1);
                             continue;
                         }
-
-                        currentPageCandidates.add(
+                        outputCandidates.add(
                                 new Candidate(url, null, name, index, entry.getValue()));
-
-                       // System.out.println("# CANDIDATE # -- url="+url+" name="+name+"::: index=" + index);
-
                         index = i.getRawText().indexOf(name, index + 1);							
                     }
                 }
             }
         }
-        return currentPageCandidates;
+        
+        // TODO FOR DEBUG ONLY:
+        for (TruthMention m : i.truthMentions) {
+            boolean isNotACandidate = true;
+            for (Candidate c : outputCandidates) {
+                if (c.entityURL.compareTo(m.wikiUrl) == 0 && c.name.compareTo(m.anchorText) == 0 && c.textIndex == m.mentionOffsetInText)
+                    isNotACandidate = false;
+            }
+
+            if (isNotACandidate) {
+                System.out.println("[NOT A CANDIDATE] " + m + ";; docName = " + i.pageName +
+                        " ----> raw context: " + i.getRawText().substring(Math.max(0,m.mentionOffsetInText - 10), m.mentionOffsetInText + m.anchorText.length() + 1) + ":::");
+                for (Candidate c : outputCandidates) {
+                    if (c.entityURL.compareTo(m.wikiUrl) == 0) {
+                        System.out.println("[CAND]" + c.entityURL + " " + c.name + " " + c.textIndex);
+                    }
+                }                
+            } else {
+                nrTruthCorrectCandidates++;
+            }
+        }        
+        
+        return nrTruthCorrectCandidates;
     }
+        
+    private static void GenAllCandidatesFromAllPages(
+            GenericPagesIterator pagesIterator,
+            double theta,
+            HashSet<String> allCandidateNames,
+            Vector<Vector<Candidate>> allCandidates) {
+        System.err.println("[INFO] Generating all candidates and their names ...");
+        int nr_page = -1;
+        int nrCandidates = 0;
+        int nrMentions = 0;
+        int nrTruthCandidates = 0;
+        
+        HashSet<String> allMentionsNames = new HashSet<String>();
+        while (pagesIterator.hasNext()) {
+            nr_page++;
+            if (nr_page % 10000 == 0) {
+                System.err.println("[INFO] " + nr_page);
+            }
+            GenericSinglePage i = pagesIterator.next();
+
+            Vector<Candidate> thisPageCandidates = new Vector<Candidate>();
+            nrTruthCandidates += GenAllCandidatesFromOnePage(i, theta, thisPageCandidates);
+            allCandidates.add(thisPageCandidates);
+            for (Candidate cand : thisPageCandidates) {
+                allCandidateNames.add(cand.name);
+            }
+            nrCandidates += thisPageCandidates.size();
+            
+            for (TruthMention m : i.truthMentions) {
+                allMentionsNames.add(m.anchorText);
+            }
+            nrMentions += i.truthMentions.size();
+        }
+        System.err.println("[INFO] Done. Num all generated candidates = " + nrCandidates);
+        System.err.println("[INFO] Num all candidates' names = " + allCandidateNames.size());
+        System.err.println("[INFO] Num all mentions from all input docs = " + nrMentions);
+        System.err.println("[INFO] Num all mentions' names = " + allMentionsNames.size());
+        System.err.println("[INFO] Num truth candidates (candidates that are ground truth mentions) = " + nrTruthCandidates);
+    }
+        
 
     // Compute denominator(n,e,E) = \sum_{e' \neq e} p(e'|n) \frac{1}{p(e' \not\in E)}
     // This does not use the dummy entity.
@@ -286,7 +383,7 @@ public class GenCandidateEntityNamePairs {
             }
 
             // if e \in E
-            if (docEntities.contains(url)) {
+            if (docEntities.contains(url) && allEntsFreqs.containsKey(url)) {
                 denominator += cprob * totalNumDocs / allEntsFreqs.get(url);
             }
             // if e \notin E
@@ -345,7 +442,7 @@ public class GenCandidateEntityNamePairs {
     // ** for each candidate - compute posterior probability and keep the highest scored one for each (offset,name)
     // ** for each winner candidate - print it and print debug info
     private static void GenWinningEntities(
-            WikilinksSinglePage i,
+            GenericSinglePage i,
             Vector<Candidate> candidates,
             HashSet<String> docEntities,
             boolean includeDummyEnt) {
@@ -430,7 +527,7 @@ public class GenCandidateEntityNamePairs {
      *  Returns a set of winning candidates.   
      */
     private static Vector<Candidate> GenWinningEntitiesWithExtendedTokenSpan(
-            WikilinksSinglePage i,
+            GenericSinglePage i,
             Vector<Candidate> candidates,
             HashSet<String> docEntities,
             boolean includeDummyEnt) {
@@ -594,7 +691,7 @@ public class GenCandidateEntityNamePairs {
             }
             winners.add(winnerKey);
             
-            /*
+            ////////////// COMMENT HERE START
             // Print winner and some debug values:
             System.out.println();
             System.out.print("entity=" + winnerURL + "; candidate_name=" + name + "; matched_name=" + winnerName);
@@ -607,11 +704,11 @@ public class GenCandidateEntityNamePairs {
                 start = 0;
             }
             int end = winnerOffset + 50;
-            if (end >= i.allAnnotatedText.length()) {
-                end = i.allAnnotatedText.length() - 1;
+            if (end >= i.getRawText().length()) {
+                end = i.getRawText().length() - 1;
             }
 
-            System.out.println(";context=" + i.allAnnotatedText.substring(start, end).replace('\n', ' '));
+            System.out.println(";context=" + i.getRawText().substring(start, end).replace('\n', ' '));
             
             
             if (dummyScore > 0 && dummyScore <= winnerScore) {
@@ -625,7 +722,7 @@ public class GenCandidateEntityNamePairs {
                     System.out.println("## GOOD RESULT ##");
                 }
             }
-            */
+            ////////////// COMMENT HERE END
             
             if (dummyScore <= 0 || dummyScore <= winnerScore) {
                 Candidate c = new Candidate(winnerURL, null, winnerName, winnerOffset, -1);
@@ -672,62 +769,40 @@ public class GenCandidateEntityNamePairs {
             String allEntitiesFilename, 
             String dummyProbsFilename,
             Double theta, 
-            String webpagesFilename,
+            GenericPagesIterator inputPagesIterator,
             boolean extendedTokenSpan,
             boolean includeDummyEnt) throws IOException, InterruptedException {
 
-        System.err.println("loading all entities...");
         LoadAllEntities(allEntitiesFilename);
-        System.err.println("All ents size : " + allEntsFreqs.size() + " ; total num docs = " + totalNumDocs);
-
-        System.err.println("loading and prunning inv index P(n|e) ...");
-        LoadAndPruneInvdict(invdictFilename);
-        System.err.println("Done loading index. Size = " + invdict.size());
 
         // ***** STAGE 1: Generate all candidate pairs (n,e) such that P(n|e) >= theta
+        GenericPagesIterator p = inputPagesIterator.hardCopy();
+        HashSet<String> allEntitiesFromAllPages = GetAllEntitiesFromAllPages(p);        
+        LoadAndPruneInvdict(invdictFilename, allEntitiesFromAllPages);
+
         HashSet<String> allCandidateNames = new HashSet<String>();
         Vector<Vector<Candidate>> allCandidates = new Vector<Vector<Candidate>>();
+        p = inputPagesIterator.hardCopy();
+        GenAllCandidatesFromAllPages(p, theta, allCandidateNames, allCandidates);
 
-        System.err.println("Generating all candidates and their names ...");
-        WikilinksParser p = new WikilinksParser(webpagesFilename);
-        int nr_page = -1;
-        while (p.hasMoreItems()) {
-            nr_page++;
-            if (nr_page % 10000 == 0) {
-                System.err.println(nr_page);
-            }
-            WikilinksSinglePage i = p.nextItem();
-
-            Vector<Candidate> thisPageCandidates = GenAllCandidates(i, theta);
-            allCandidates.add(thisPageCandidates);
-            for (Candidate cand : thisPageCandidates) {
-                allCandidateNames.add(cand.name);
-            }
-        }
-        System.err.println("Done. Num all candidate names = " + allCandidateNames.size());
-
-        // Free memory:
         invdict = null;
 
-        System.err.println("loading dict P(e|n) index...");
-        LoadDict(dictFilename, allCandidateNames);
-        System.err.println("Done. Size = " + dict.size());
+        // ***** STAGE 2: Compute the l(n,e) values, group by n and find the winning candidate.
+        System.err.println("[INFO] Winner entities:");
+        
+        LoadAndPruneDict(dictFilename, allCandidateNames);
 
         if (includeDummyEnt) {
-            System.err.println("loading dummy probs P(M.ent != dummy| M.ent = n) index...");
             LoadDummyProbs(dummyProbsFilename);
-            System.err.println("Done. Size = " + dummyProbabilities.size());
         }
-
-        // ***** STAGE 2: Compute the l(n,e) values, group by n and find the winning candidate.
-        System.err.println("Winner entities:");
-        p = new WikilinksParser(webpagesFilename);
-        nr_page = -1;
-        while (p.hasMoreItems()) {
+        
+        p = inputPagesIterator.hardCopy();
+        int nr_page = -1;
+        while (p.hasNext()) {
             nr_page++;
-            System.out.println("------- Page: " + nr_page);
 
-            WikilinksSinglePage i = p.nextItem();
+            GenericSinglePage i = p.next();
+            System.out.println("[INFO] ------- Page: " + nr_page + " ---- Page name: " + i.pageName);
 
             // compute M.doc.E
             HashSet<String> docEntities = new HashSet<String>();
@@ -740,7 +815,6 @@ public class GenCandidateEntityNamePairs {
             HashMap<String,String> wikiFreebaseMap = new HashMap<String,String>();
             
             for (TruthMention m : i.truthMentions) {
-              //  System.out.println("## MENTION ## " + m);
                 wikiFreebaseMap.put(m.wikiUrl, m.freebaseId);
             }
             
@@ -748,6 +822,7 @@ public class GenCandidateEntityNamePairs {
                 Vector<Candidate> matchings = 
                     GenWinningEntitiesWithExtendedTokenSpan(i, allCandidates.get(nr_page), docEntities, includeDummyEnt);
                 
+                /*
                 TreeMap<Integer, Candidate> sortedByOffsetMatchings = new TreeMap<Integer, Candidate>();
                 for (Candidate c : matchings) {
                     if (wikiFreebaseMap.containsKey(c.entityURL)) {
@@ -855,6 +930,7 @@ public class GenCandidateEntityNamePairs {
                         if (good) System.out.println(sb.toString());
                     }
                 }
+                */
             } else {
                 GenWinningEntities(i, allCandidates.get(nr_page), docEntities, includeDummyEnt);
             }

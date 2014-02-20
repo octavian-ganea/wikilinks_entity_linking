@@ -2,36 +2,13 @@ package entity_linking.input_data_pipeline;
 
 import java.util.Vector;
 
-public class WikilinksSinglePage {
-	String pageNum; // from the current shard
+public class WikilinksSinglePage extends GenericSinglePage {
 	int docId;
 	String pageUrl;
-	public Vector<TruthMention> truthMentions;
-	private String rawText;
 	
 	public WikilinksSinglePage() {
 	    truthMentions = new Vector<TruthMention>();
 		docId = 0;
-	}
-	
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("-------------------------------------\n");
-		sb.append("--- Page num: " + pageNum + "\n");
-		sb.append("--- Docid: " + docId + "\n");
-		sb.append("--- URL: " + pageUrl + "\n");
-		sb.append("--- Mentions:" + "\n");
-		for (TruthMention m : truthMentions) {
-			sb.append(m.toString() + "\n");
-		}
-		sb.append("--- Sentences:" + "\n");
-		sb.append("--- All text:" + "\n" + rawText);
-		
-		return sb.toString();
-	}
-	
-	public String getRawText() {
-	    return rawText;
 	}
 	
 	public void setAnnotatedText(String annotatedText) {

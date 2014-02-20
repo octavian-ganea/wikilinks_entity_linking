@@ -1,5 +1,7 @@
 package entity_linking;
 
+import entity_linking.input_data_pipeline.*;
+
 public class Main {
 	///////////////////// MAIN ////////////////////////////////////////////
 	public static void main(String[] args) throws Exception {
@@ -33,10 +35,10 @@ public class Main {
 		// Computes p(dummy | n) probabilities for all names n by looking at all files from the
 		// Wikilinks corpus and counting the number of docs where n the anchor text of an Wikipedia link
 		// over the number of docs in which n appears
-		// Input: args[0] = file with all known names
+		// Input: args[0] = file with all known names extracted using [ExtractAllNamesFromCrosswikiDict]
 		//        args[1] = directory with corpus data
-		//        args[2] = [dummy_probs]
-		if (args.length == 3 && args[2].compareTo("[dummy_probs]") == 0) {
+		//        args[2] = [dummyProbs]
+		if (args.length == 3 && args[2].compareTo("[dummyProbs]") == 0) {
 		    Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");    
 			DummyEntityProbabilities.compute(args[0], args[1]);
 			return;
@@ -46,8 +48,8 @@ public class Main {
 		// Main functionality of the code that implements the name-entity matching algorithms from the papers.
 		// Input: args[0] = complete inv.dict file P(n|e)
 		//        args[1] = complete dict file P(e|n) 
-		//        args[2] = all entities file generated with [file_ents] from args[5]
-		//        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n) from [dummy_probs]
+		//        args[2] = all entities file generated with [ExtractEntsWithFreq] from args[5]
+		//        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n) from [dummyProbs]
 		//        args[4] = theta
 		//        args[5] = input WikiLinkItems shard file of the Wikilinks corpus
 		//        args[6] = [simple] or [extended-token-span]
@@ -65,13 +67,61 @@ public class Main {
 	        }
 		    
 	        Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");
+	        
+	        GenericPagesIterator inputPagesIterator = new WikilinksParser(args[5]);
+
 			GenCandidateEntityNamePairs.run(
 					args[0], args[1], args[2], args[3], 
-					Double.parseDouble(args[4]), args[5],
+					Double.parseDouble(args[4]), inputPagesIterator,
 					args[6].contains("[extended-token-span]"), !args[7].contains("[no-dummy]"));
 			return;
 		}
 		
-		System.err.println("[ERROR] Invalid command line parameters.");
+
+		
+        // IITB testing.
+        // Input: args[0] = complete inv.dict file P(n|e)
+        //        args[1] = complete dict file P(e|n) 
+        //        args[2] = all entities file generated with [ExtractEntsWithFreq] from args[5]
+        //        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n) from [dummyProbs]
+        //        args[4] = theta
+        //        args[5] = IITB ground truth annotations XML filename
+		//        args[6] = IITB directory containing all the text documents
+        //        args[7] = [simple] or [extended-token-span]
+        //        args[8] = [dummy] or [no-dummy]
+        //        args[9] = [IITB-testing]
+        // OUTPUT: stdout
+        if (args.length == 10 && args[9].compareTo("[IITB-testing]") == 0) {
+            if (args[8].compareTo("[dummy]") != 0 && args[8].compareTo("[no-dummy]") != 0) {
+                System.err.println("Invalid param " + args[8]);
+                System.exit(1);
+            }
+            if (args[7].compareTo("[simple]") != 0 && args[7].compareTo("[extended-token-span]") != 0) {
+                System.err.println("Invalid param " + args[7]);
+                System.exit(1);
+            }            
+            Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");
+            
+            IITBPagesIterator iitbIterator = new IITBPagesIterator(args[5], args[6]);
+
+            int totalnrdocs = 0, totalnrmentions = 0;
+            while (iitbIterator.hasNext()) {
+                totalnrdocs ++;
+                totalnrmentions += iitbIterator.next().truthMentions.size();
+            }
+            System.err.println("[NRDOCS in IITB] " + totalnrdocs);
+            System.err.println("[TOTAL GROUND TRUTH MENTIONS IN IITB] " + totalnrmentions);
+            
+            iitbIterator = new IITBPagesIterator(args[5], args[6]);
+            
+            
+            GenCandidateEntityNamePairs.run(
+                    args[0], args[1], args[2], args[3], 
+                    Double.parseDouble(args[4]), iitbIterator,
+                    args[7].contains("[extended-token-span]"), !args[8].contains("[no-dummy]"));
+            return;
+        }		
+		
+		System.err.println("[ERROR] Invalid command line parameters!");
 	}
 }

@@ -57,13 +57,13 @@ public class DummyEntityProbabilities {
 			System.err.println("Processing file " + corpusDirectory + filename);
 			WikilinksParser p = new WikilinksParser(corpusDirectory + filename);
 			int nr_page = -1;
-			while (p.hasMoreItems()) {
+			while (p.hasNext()) {
 				nr_page++;
 				if (nr_page % 10000 == 0) {
 					System.err.println("page nr " + nr_page);
 				}
 				
-				WikilinksSinglePage i = p.nextItem();
+				WikilinksSinglePage i = p.next();
 				
 				HashSet<String> mentionNames = new HashSet<String>();
 				for (TruthMention m : i.truthMentions) {

@@ -5,10 +5,11 @@
     <target name="create_run_jar">
         <jar destfile="/home/octi/Desktop/nlp/WikilinksEntityLinker/extract.jar" filesetmanifest="mergewithoutmain">
             <manifest>
-                <attribute name="Main-Class" value="Main"/>
+                <attribute name="Main-Class" value="entity_linking.Main"/>
                 <attribute name="Class-Path" value="."/>
             </manifest>
             <fileset dir="/home/octi/Desktop/nlp/WikilinksEntityLinker/bin"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/stanford-corenlp-3.3.0.jar"/>
         </jar>
     </target>
 </project>
