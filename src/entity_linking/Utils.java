@@ -16,7 +16,7 @@ public class Utils {
 	public static void loadWikiRedirects(String filename) throws IOException {
        System.err.println("[INFO] Loading Wikipedia redirects...");
 
-		wikiRedirects = new HashMap<String,String>();
+		wikiRedirects = new HashMap<String,String>(3000000);
 		
 		if (new java.io.File(filename).exists() == false) {
 			System.err.println("[FATAL] Wikipedia Redirects file does not exist.");
@@ -46,12 +46,21 @@ public class Utils {
 			url = url.substring(url.indexOf("wikipedia.org") + "wikipedia.org".length());
 		}
 		String final_url = url;
+		if (url.length() == 0) return "";
+
+		if (Character.isLowerCase(url.charAt(0))) {
+		    url = url.substring(0, 1).toUpperCase() + url.substring(1);
+		}
+
 		try {
 			final_url = URLDecoder.decode(url, "UTF-8");
 		} catch (UnsupportedEncodingException e) {
 		} catch (java.lang.IllegalArgumentException e) {
 	    }	
-		
+
+		final_url = final_url.replace("%29", ")");
+        final_url = final_url.replace("%28", "(");
+
 		final_url = final_url.replace('_', ' ');
 		if (wikiRedirects.containsKey(final_url)) {
 			final_url = wikiRedirects.get(final_url);
@@ -81,29 +90,13 @@ public class Utils {
 	}
 	
 	static 	public boolean isWordSeparator(char c) {
-		if (c == ' ' || c == ',' || c == '"' || c == ':' || c == '.' || c == '?' || c == '!' || c == '(' ||
-				c == ')' || c == '[' || c == ']' || c == '+' || c == '=' || c == '\'' || c == '`' || c == '\n' ||
-				c == '\r' || c == ';' || c =='#' || Character.isWhitespace(c) || Character.isSpace(c)) {
+		if (Character.isWhitespace(c) || Character.isSpace(c) || c == ' ' || c == ',' || c == '"' || c == ':' || c == '.' || c == '-' ||  c == '?' || c == '!' || c == '(' ||
+				c == ')' || c == '[' || c == ']' || c == '+' || c == '*' || c == '=' || c == '\'' || c == '`' || c == '\n' ||
+				c == '\r' || c == ';' || c =='#') {
 		    return true;
 		}
 		return false;
 	}
-	
-	// Tokenization function: decides if a substring of a text is a separate word.
-	static public boolean isSeparateWord(String text, int lastIndex, String word) {		
-		if (lastIndex > 0 && (!Utils.isWordSeparator(text.charAt(lastIndex - 1)))) {
-			return false;
-		}
-		if (lastIndex + word.length() < text.length() && (!Utils.isWordSeparator(text.charAt(lastIndex + word.length())))) {
-			return false;
-		}
-		// Avoid situations like "Alexander II,"
-		if (Utils.isWordSeparator(text.charAt(lastIndex)) || Utils.isWordSeparator(text.charAt(lastIndex+ word.length() - 1))) {
-			return false;
-		}		
-		return true;
-	}
-	
 	
 	// Returns all sub-token spans of t=n-,n,n+ that contain n.
 	// n is the token starting at offset from text.

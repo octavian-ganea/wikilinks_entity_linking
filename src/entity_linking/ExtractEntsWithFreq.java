@@ -15,7 +15,7 @@ import entity_linking.input_data_pipeline.*;
 
 public class ExtractEntsWithFreq {
 	// Extract a set with all entities from the Wikilinks corpus and their doc frequencies
-	// CODE : get mentions for each item; add to a file pair (wikipedia url, #docs)
+	// CODE : get mentions for each item; write to a file a set of pairs (wikipedia url, #docs)
     public static void fromFile(String filename, String outputfile) throws IOException {		
         WikilinksParser p = new WikilinksParser(filename);
 
@@ -24,10 +24,10 @@ public class ExtractEntsWithFreq {
         int doc_index = 0;
         while (p.hasNext()) {
             doc_index++;
-            WikilinksSinglePage i = p.next();
+            WikilinksSinglePage doc = p.next();
 
             HashSet<String> hs = new HashSet<String>();
-            for (TruthMention m : i.truthMentions) {
+            for (TruthMention m : doc.truthMentions) {
                 if (m.wikiUrl.length() > 0)
                     hs.add(m.wikiUrl);
             }
@@ -71,11 +71,13 @@ public class ExtractEntsWithFreq {
 		    if (!filename.endsWith(".data")) {
 		        continue;       
 		    }
-		    fromFile(filename, dir_file + filename + "._2_shard");
+		    fromFile(dir_file + filename, dir_file + filename + "._2_shard");
 		}
 	        
 		int total_nr_docs = 0;
 		HashMap<String, Integer> freqMap = new HashMap<String, Integer>();
+        dir = new File(dir_file);
+        list = dir.list();
 		for (String filename : list) {
 			if (!filename.endsWith("._2_shard")) {
 			    continue;

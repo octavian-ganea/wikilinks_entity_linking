@@ -7,8 +7,9 @@ import java.util.Vector;
 public abstract class GenericSinglePage {
     public String pageName;
     
-    // Vector of truth mentions (in any order).
+    // Vector of truth mentions (in any order). Might contain duplicates!
     public Vector<TruthMention> truthMentions;
+    
     protected String rawText;
     
     public GenericSinglePage() {

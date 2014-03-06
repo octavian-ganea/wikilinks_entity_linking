@@ -102,10 +102,8 @@ public class IITBPagesIterator implements GenericPagesIterator {
                 Vector<TruthMention> truthMentions = new Vector<TruthMention>();
                 
                 for (Annotation annotation : annotations.get(docName)) {
-                    //System.out.println("Wiki:" + annotation.wikiName + " Docname: " + annotation.docName + " Offset:" + annotation.offset + " Len:" + annotation.length + " Textlen:" + text.length());
                     TruthMention truthMention = new TruthMention(annotation.wikiName, null,
                             text.substring(annotation.offset, annotation.offset + annotation.length), annotation.offset);
-                    //System.out.println("::::::" + truthMention.anchorText + "::::" + truthMention.wikiUrl);
                     truthMentions.add(truthMention);
                 }
                 

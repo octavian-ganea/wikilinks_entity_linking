@@ -1,14 +1,46 @@
 package entity_linking;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Vector;
+
 import entity_linking.input_data_pipeline.*;
 
-public class Main {
+public class Main {    
 	///////////////////// MAIN ////////////////////////////////////////////
 	public static void main(String[] args) throws Exception {
-		
+	    
+        // INPUT: args[0] = directory that contains all Wikilinks *.data files OR single input *.data file 
+        //        args[1] = file with Crosswikis inv.dict
+	    //        args[2] = file with all entities from Wikilinks generated with [ExtractEntsWithFreq]
+        // OUTPUT: args[3] = files with (name, doc freq)
+        // args[4] = [ComputeCrosswikisProbs]
+        if (args.length == 5 && args[4].compareTo("[ComputeCrosswikisProbs]") == 0) {            
+            Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");  
+            ComputeCrosswikisProbs.fromDir(args[0], args[1], args[2], args[3]);
+            return;
+        }
+	    
+	    
+        // Extract a set with all 1-ngrams and 2-ngrams from the Wikilinks corpus (*.data file)
+        // together with their doc frequencies. Just names appearing in Crosswikis dict are considered.
+	    // This was used to compute p(name) and to evaluate
+	    // p(exist ent | n) = p(n|e)/p(e|n,exist e)  * p(e)/p(n)
+        // INPUT: args[0] = directory that contains all Wikilinks *.data files OR single input *.data file 
+	    //        args[1] = file with Crosswikis dict
+        // OUTPUT: args[2] = files with (name, doc freq)
+	    //         args[3] = num shards for output files (RAM restrictions impose this)
+        // args[2] = [ExtractNamesWithDocFreq]
+        if (args.length == 5 && args[4].compareTo("[ExtractNamesWithDocFreq]") == 0) {            
+            Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");  
+            ExtractNamesWithDocFreqs.fromDir(args[0], args[1], args[2], Integer.parseInt(args[3]));
+            return;
+        }
+	    
 		// Extract a set with all entities from the Wikilinks corpus (*.data file)
 		// together with their doc frequencies
-		// INPUT: args[0] = directory that contains all *.data files OR single input *.data file	
+		// INPUT: args[0] = directory that contains all Wikilinks *.data files OR single input *.data file	
 		// OUTPUT: args[1] = file with (url, doc freq) 
 		// args[2] = [ExtractEntsWithFreq]
 		if (args.length == 3 && args[2].compareTo("[ExtractEntsWithFreq]") == 0) {
@@ -48,7 +80,7 @@ public class Main {
 		// Main functionality of the code that implements the name-entity matching algorithms from the papers.
 		// Input: args[0] = complete inv.dict file P(n|e)
 		//        args[1] = complete dict file P(e|n) 
-		//        args[2] = all entities file generated with [ExtractEntsWithFreq] from args[5]
+		//        args[2] = all entities file generated with [ExtractEntsWithFreq] from (Wikilinks corpus) args[5]
 		//        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n) from [dummyProbs]
 		//        args[4] = theta
 		//        args[5] = input WikiLinkItems shard file of the Wikilinks corpus
@@ -82,7 +114,7 @@ public class Main {
         // IITB testing.
         // Input: args[0] = complete inv.dict file P(n|e)
         //        args[1] = complete dict file P(e|n) 
-        //        args[2] = all entities file generated with [ExtractEntsWithFreq] from args[5]
+        //        args[2] = all entities file generated with [ExtractEntsWithFreq] from Wikilinks (args[5])
         //        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n) from [dummyProbs]
         //        args[4] = theta
         //        args[5] = IITB ground truth annotations XML filename
