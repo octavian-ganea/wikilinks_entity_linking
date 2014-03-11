@@ -45,13 +45,7 @@ public class Main {
 		// args[2] = [ExtractEntsWithFreq]
 		if (args.length == 3 && args[2].compareTo("[ExtractEntsWithFreq]") == 0) {
 		    Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");  
-		    
-		    // args[0] is a single .data file
-		    ExtractEntsWithFreq.fromFile(args[0], args[1]);
-			
-			// Uncomment the next line to generate the (url, doc freq)  for the entire Wikilinks corpus
-			// args[0] is a directory containing .data files
-//			ExtractEntsWithFreq.fromDir(args[0], args[1]);
+			ExtractEntsWithFreq.fromDir(args[0], args[1]);
 		    return;
 		}
 					

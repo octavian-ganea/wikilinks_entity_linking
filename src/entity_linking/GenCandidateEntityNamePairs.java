@@ -83,6 +83,7 @@ public class GenCandidateEntityNamePairs {
         System.err.println("[INFO] All ents size : " + entsDocFreqsInCorpus.size() + " ; total num docs = " + totalNumDocs);
     }
     
+    // Get the set of all entities from all the pages by looking at the truth mentions.
     private static HashSet<String> GetAllEntitiesFromAllPages(GenericPagesIterator inputPagesIterator) {
         GenericPagesIterator pagesIterator = inputPagesIterator.hardCopy();
 
@@ -108,67 +109,6 @@ public class GenCandidateEntityNamePairs {
         return allEntitiesFromAllPages;
     }
  
-    // invdict: P(n|e)
-    private static void LoadAndPruneInvdict(String filename, HashSet<String> allEntitiesFromAllPages) throws IOException{
-        // <url><tab><cprob><space><string>[<tab><score>[<space><score>]*]
-
-        System.err.println("[INFO] Loading and prunning inv.dict P(n|e) ...");
-        
-        invdict =  new HashMap<String, TreeMap<String, Double>>();
-        BufferedReader in = new BufferedReader(new FileReader(filename));
-        String line = in.readLine();
-        int nr_line = 0;
-        String lastUrl = "";
-        while (line != null && line.length() > 3) {
-            nr_line ++;
-            if (nr_line % 20000000 == 0) {
-                System.err.println("loaded " + nr_line);
-            }
-            StringTokenizer st = new StringTokenizer(line, "\t");
-
-            if (!st.hasMoreTokens()) {
-                line = in.readLine();
-                continue;
-            }
-            String unprocessedUrl = st.nextToken();
-            String url = Utils.pruneURL(unprocessedUrl);
-            
-            if (!st.hasMoreTokens()) {
-                line = in.readLine();
-                continue;
-            }
-
-            String left = st.nextToken();
-            double cprob = Double.parseDouble(left.substring(0,left.indexOf(" ")));				
-            String mention = left.substring(left.indexOf(" ") + 1);			
-
-            // It doesn't make sense to have a candidate entity for which allEntsFreq is 0, because this will mean p(e \in E) = 0
-            if (!allEntitiesFromAllPages.contains(url) || !entsDocFreqsInCorpus.containsKey(url) || cprob < 0.0001) {
-                line = in.readLine();
-                continue;
-            }
-
-            if (url.compareTo(lastUrl) != 0) {
-                if (invdict.containsKey(url)) {
-                    System.err.println(unprocessedUrl + " :::: " + url);                    
-                } else {
-                    System.err.println(unprocessedUrl + " ::----->:: " + url);
-                }
-            }
-            lastUrl = url;
-            
-            if (!invdict.containsKey(url)) {
-                invdict.put(url, new TreeMap<String, Double>());
-            }
-            invdict.get(url).put(mention, cprob);
-
-            line = in.readLine();
-        }
-        in.close();		
-
-        System.err.println("[INFO] Done loading index. Size = " + invdict.size());
-    }		
-
     private static void LoadDummyProbs(String dummyProbsFilename) throws IOException {
         System.err.println("[INFO] Loading dummy probs P(M.ent != dummy| M.ent = n) index...");
 
@@ -803,7 +743,8 @@ public class GenCandidateEntityNamePairs {
 
         // ***** STAGE 1: Generate all candidate pairs (n,e) such that P(n|e) >= theta
         HashSet<String> allEntitiesFromAllPages = GetAllEntitiesFromAllPages(inputPagesIterator);        
-        LoadAndPruneInvdict(invdictFilename, allEntitiesFromAllPages);
+        invdict = LoadCrosswikisInvdict.load(invdictFilename, allEntitiesFromAllPages, entsDocFreqsInCorpus);
+        System.gc();
 
         HashSet<String> allCandidateNames = new HashSet<String>();
         Vector<Vector<Candidate>> allCandidates = new Vector<Vector<Candidate>>();
@@ -816,7 +757,7 @@ public class GenCandidateEntityNamePairs {
 
         System.gc(); // Clean inv.dict index
         // ***** STAGE 2: Compute the l(n,e) values, group by n and find the winning candidate.        
-        dict = LoadCrosswikisDict.LoadAndPruneDict(dictFilename, allCandidateNames);
+        dict = LoadCrosswikisDict.load(dictFilename, allCandidateNames);
 
         if (includeDummyEnt) {
             LoadDummyProbs(dummyProbsFilename);

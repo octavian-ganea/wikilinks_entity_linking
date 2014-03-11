@@ -67,7 +67,7 @@ public class ExtractNamesWithDocFreqs {
     }   
 
     
-    public static void fromFile(String filename, HashSet<String> dictNames, HashMap<String, Integer> freqMap) throws IOException {    
+    private static void fromFile(String filename, HashSet<String> dictNames, HashMap<String, Integer> freqMap) throws IOException {    
         System.err.println("Processing file " + filename);
         WikilinksParser p = new WikilinksParser(filename);
 

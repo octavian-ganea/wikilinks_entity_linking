@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.DecimalFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,7 +26,7 @@ public class ComputeCrosswikisProbs {
     
     static class NameEntry implements Comparable<NameEntry> {
         public String name;
-        public int freq;
+        public int freq;  // #anc(e,n)
         
         public NameEntry(String name, int freq) {
             this.name = name;
@@ -44,7 +45,7 @@ public class ComputeCrosswikisProbs {
     static class EntityStatsFromWikilinks {
         String url; // entity
         int numAnchors; // number of anchors of this entity: #anc(e)
-        HashMap<String, Integer> nameFreqs; // number of anchors of this entity having a specific name
+        HashMap<String, Integer> nameFreqs; // number of anchors of this entity having a specific name: #anc(e,n)
         
         public EntityStatsFromWikilinks(String url) {
             this.url = url;
@@ -96,8 +97,7 @@ public class ComputeCrosswikisProbs {
                 line = in.readLine();
                 continue;
             }
-            String url = st.nextToken();
-            url = Utils.pruneURL(url);
+            String url = Utils.pruneURL(st.nextToken());
 
             if (!st.hasMoreTokens()) {
                 line = in.readLine();
@@ -108,16 +108,18 @@ public class ComputeCrosswikisProbs {
 
             line = in.readLine();
         }
-        in.close();     
-
-        System.err.println("[INFO] Num ents to be corrected = " + allEntsFromWikilinksButNotInvDict.size());
-        
+        in.close();             
         return allEntsFromWikilinksButNotInvDict;
     }   
 
-    
-    public static void fromFile(String filename, HashSet<String> allEntsToCorrect, TreeMap<String, EntityStatsFromWikilinks> entStats) throws IOException {    
-        System.err.println("Processing file " + filename);
+    // Computes p(n|e) from a single Wikilinks file
+    public static void fromFile(
+            String filename,
+            HashSet<String> allEntsToCorrect,
+            TreeMap<String, EntityStatsFromWikilinks> entStats,
+            int nr_file) throws IOException {
+        
+        System.err.println("Processing file " + filename + " ; number = " + nr_file);
         WikilinksParser p = new WikilinksParser(filename);
 
         int doc_index = 0;
@@ -151,6 +153,8 @@ public class ComputeCrosswikisProbs {
         }
 
         HashSet<String> allEntsToCorrect = FindAllEntitiesFromWikilinksButNotInvDict(invDictFilename, allEntsFilename);
+        System.err.println("[INFO] Number ents to be corrected = " + allEntsToCorrect.size());
+
 
         TreeMap<String, EntityStatsFromWikilinks> entStats = new TreeMap<String, EntityStatsFromWikilinks>();
 
@@ -160,11 +164,13 @@ public class ComputeCrosswikisProbs {
             return;
         }
         String[] list = dir.list();
+        int nr_file = 0;
         for (String filename : list) {
             if (!filename.endsWith(".data")) {
                 continue;       
             }
-            fromFile(dir_file + filename, allEntsToCorrect, entStats);
+            nr_file++;
+            fromFile(dir_file + filename, allEntsToCorrect, entStats, nr_file);
         }
         
         PrintWriter writer = new PrintWriter(out_file, "UTF-8");
@@ -177,7 +183,10 @@ public class ComputeCrosswikisProbs {
             
             for (NameEntry ne : v) {
                 double cprob = ((double)ne.freq) / entStats.get(url).numAnchors;
-                writer.println(url + "\t" + cprob + " " + ne.name + "\t" + ne.freq + "\t" + entStats.get(url).numAnchors);                
+                DecimalFormat df = new DecimalFormat("#.######");
+
+                // <url><tab><cprob><space><string>[<tab><score>[<space><score>]*]
+                writer.println(url + "\t" + df.format(cprob) + " " + ne.name + "\tw:" + ne.freq + "/" + entStats.get(url).numAnchors);                
             }
             
         }

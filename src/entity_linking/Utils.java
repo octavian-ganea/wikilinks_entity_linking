@@ -27,14 +27,20 @@ public class Utils {
 		String line = in.readLine();
 		while (line != null) {
 			StringTokenizer st = new StringTokenizer(line, "\t");
-			wikiRedirects.put(st.nextToken(), st.nextToken());
+			wikiRedirects.put(pruneURLWithRedirect(st.nextToken(), false), pruneURLWithRedirect(st.nextToken(), false));
 			line = in.readLine();
 		}
+		
 		System.err.println("[INFO] Done loading Wikipedia redirects.");
 	}
 	
 	public static String pruneURL(String s) {
-	    if (wikiRedirects == null) {
+	    return pruneURLWithRedirect(s, true);
+	}
+	
+	public static String pruneURLWithRedirect(String s, boolean useRedirects) {
+	    
+	    if (useRedirects && wikiRedirects == null) {
 	        System.err.println("[FATAL] The Wikipedia redirects file was not loaded.");
 	        System.exit(1);
 	    }
@@ -61,12 +67,12 @@ public class Utils {
 		final_url = final_url.replace("%29", ")");
         final_url = final_url.replace("%28", "(");
 
-		final_url = final_url.replace('_', ' ');
-		if (wikiRedirects.containsKey(final_url)) {
+        final_url = final_url.replace(' ', '_');
+
+		if (useRedirects && wikiRedirects.containsKey(final_url)) {
 			final_url = wikiRedirects.get(final_url);
 		}
 		
-		final_url = final_url.replace(' ', '_');
 		StringBuilder sb = new StringBuilder();
 		for (char c : final_url.toCharArray()) {
 			if (!Character.isSpace(c)) {
