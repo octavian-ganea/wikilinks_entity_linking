@@ -32,7 +32,7 @@ class DictEntry implements Comparable {
     }
 }
 
-//TODO: 2 TODOs down here if you want to do a merging on inv.dict from the beginning
+//TODO: 3 TODOs down here if you want to do a merging on inv.dict from the beginning
 
 // Class for loading a (possibily prunned) Crosswiki dictionary p(e|n) from the dict file
 public class LoadCrosswikisDict {
@@ -67,20 +67,25 @@ public class LoadCrosswikisDict {
             }
             
             String name = st.nextToken();
+            
+            // TODO: comment this if you want to do a merging on inv.dict from the beginning
             if (!allCandidateNames.contains(name) || !st.hasMoreTokens()) {
                 line = in.readLine();
                 continue;
             }
+            /**/
             
             // When name changes.
             if (name.compareTo(currentName) != 0) {
                 if (currentName.length() > 0 && tmpDictEntriesForOneName != null && denominators != null) {
+                    // TODO: comment this if you want to do a merging on inv.dict from the beginning
+                    
                     if (dict.containsKey(currentName)) {
                         System.err.println("[FATAL] Error in processing Crosswikis dict because of name: " + currentName);
                         System.exit(1);
                     }
                     dict.put(currentName, new TreeMap<String, Double>());
-
+                    /**/
                     Vector<DictEntry> v = new Vector<DictEntry>();
                     
                     for (String url : tmpDictEntriesForOneName.keySet()) {
@@ -88,7 +93,7 @@ public class LoadCrosswikisDict {
                         cp.setDenominator(denominators);
                         dict.get(currentName).put(url, cp.getScore());
                         
-                        v.add(new DictEntry(url, dict.get(currentName).get(url), cp));
+                    //    v.add(new DictEntry(url, cp.getScore(), cp));
                     }
                     
                     // TODO: uncomment this if you want to do a merging on inv.dict from the beginning
@@ -124,12 +129,13 @@ public class LoadCrosswikisDict {
         
         // End of dict. Add the remaining entries.
         if (currentName.length() > 0 && tmpDictEntriesForOneName != null && denominators != null) {
+            
             if (dict.containsKey(currentName)) {
                 System.err.println("[FATAL] Error in processing Crosswikis dict because of name: " + currentName);
                 System.exit(1);
             }
             dict.put(currentName, new TreeMap<String, Double>());
-
+            /**/
             Vector<DictEntry> v = new Vector<DictEntry>();
             
             for (String url : tmpDictEntriesForOneName.keySet()) {
@@ -137,7 +143,7 @@ public class LoadCrosswikisDict {
                 cp.setDenominator(denominators);
                 dict.get(currentName).put(url, cp.getScore());
                 
-                v.add(new DictEntry(url, dict.get(currentName).get(url), cp));
+            //    v.add(new DictEntry(url, cp.getScore(), cp));
             }
             
             // TODO: uncomment this if you want to do a merging on inv.dict from the beginning

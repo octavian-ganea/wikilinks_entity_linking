@@ -11,6 +11,28 @@ public class Main {
 	///////////////////// MAIN ////////////////////////////////////////////
 	public static void main(String[] args) throws Exception {
 	    
+	    // Compute p(\exist ent | name) in a different fashion using the Crosswikis data.
+        // INPUT: args[0] = file with all entities from Wikilinks generated with [ExtractEntsWithFreq]
+        //        args[1] = file with all names from Wikilinks generated with [ExtractNamesWithDocFreq]
+        //        args[2] = sorted by name Invdict file generated with [SortInvdictByName]
+	    //        args[3] = dict file
+        // OUTPUT: STDOUT
+        // args[4] = [ComputeExistenceOfNameAsEntity]
+        if (args.length == 5 && args[4].compareTo("[ComputeExistenceOfNameAsEntity]") == 0) {  
+            Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");  
+            ComputeExistenceOfNameAsEntity.run(args[0],args[1], args[2], args[3]);
+            return;
+        }
+	    
+	    
+	    // Sort invdict by name.
+	    // Input: args[0] = invdict filename
+	    //        args[1] = [SortInvdictByName]
+        if (args.length == 2 && args[1].compareTo("[SortInvdictByName]") == 0) {            
+            SortInvdictByName.run(args[0]);
+            return;
+        }
+	    
         // INPUT: args[0] = directory that contains all Wikilinks *.data files OR single input *.data file 
         //        args[1] = file with Crosswikis inv.dict
 	    //        args[2] = file with all entities from Wikilinks generated with [ExtractEntsWithFreq]
@@ -97,7 +119,7 @@ public class Main {
 	        GenericPagesIterator inputPagesIterator = new WikilinksParser(args[5]);
 
 			GenCandidateEntityNamePairs.run(
-					args[0], args[1], args[2], args[3], 
+					args[0], args[1], args[2], args[3], "weightedByDictScore", 1.0,
 					Double.parseDouble(args[4]), inputPagesIterator,
 					args[6].contains("[extended-token-span]"), !args[7].contains("[no-dummy]"));
 			return;
@@ -110,25 +132,27 @@ public class Main {
         //        args[1] = complete dict file P(e|n) 
         //        args[2] = all entities file generated with [ExtractEntsWithFreq] from Wikilinks (args[5])
         //        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n) from [dummyProbs]
-        //        args[4] = theta
-        //        args[5] = IITB ground truth annotations XML filename
-		//        args[6] = IITB directory containing all the text documents
-        //        args[7] = [simple] or [extended-token-span]
-        //        args[8] = [dummy] or [no-dummy]
-        //        args[9] = [IITB-testing]
+	    //        args[4] = valueToKeep (for existence dummy probs)
+        //        args[5] = multiplyConst (for existence dummy probs)
+        //        args[6] = theta
+        //        args[7] = IITB ground truth annotations XML filename
+		//        args[8] = IITB directory containing all the text documents
+        //        args[9] = [simple] or [extended-token-span]
+        //        args[10] = [dummy] or [no-dummy]
+        //        args[11] = [IITB-testing]
         // OUTPUT: stdout
-        if (args.length == 10 && args[9].compareTo("[IITB-testing]") == 0) {
-            if (args[8].compareTo("[dummy]") != 0 && args[8].compareTo("[no-dummy]") != 0) {
-                System.err.println("Invalid param " + args[8]);
+        if (args.length == 12 && args[11].compareTo("[IITB-testing]") == 0) {
+            if (args[10].compareTo("[dummy]") != 0 && args[10].compareTo("[no-dummy]") != 0) {
+                System.err.println("Invalid param " + args[10]);
                 System.exit(1);
             }
-            if (args[7].compareTo("[simple]") != 0 && args[7].compareTo("[extended-token-span]") != 0) {
-                System.err.println("Invalid param " + args[7]);
+            if (args[9].compareTo("[simple]") != 0 && args[9].compareTo("[extended-token-span]") != 0) {
+                System.err.println("Invalid param " + args[9]);
                 System.exit(1);
             }            
             Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");
             
-            IITBPagesIterator iitbIterator = new IITBPagesIterator(args[5], args[6]);
+            IITBPagesIterator iitbIterator = new IITBPagesIterator(args[7], args[8]);
 
             int totalnrdocs = 0, totalnrmentions = 0;
             while (iitbIterator.hasNext()) {
@@ -138,13 +162,13 @@ public class Main {
             System.err.println("[NRDOCS in IITB] " + totalnrdocs);
             System.err.println("[TOTAL GROUND TRUTH MENTIONS IN IITB] " + totalnrmentions);
             
-            iitbIterator = new IITBPagesIterator(args[5], args[6]);
+            iitbIterator = new IITBPagesIterator(args[7], args[8]);
             
             
             GenCandidateEntityNamePairs.run(
-                    args[0], args[1], args[2], args[3], 
-                    Double.parseDouble(args[4]), iitbIterator,
-                    args[7].contains("[extended-token-span]"), !args[8].contains("[no-dummy]"));
+                    args[0], args[1], args[2], args[3], args[4], Double.parseDouble(args[5]), 
+                    Double.parseDouble(args[6]), iitbIterator,
+                    args[9].contains("[extended-token-span]"), !args[10].contains("[no-dummy]"));
             return;
         }		
 		

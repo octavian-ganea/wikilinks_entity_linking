@@ -104,6 +104,37 @@ public class Utils {
 		return false;
 	}
 	
+	static public int NumTokens(String s) {
+	    int i = 0;
+	    while (i < s.length() && isWordSeparator(s.charAt(i))) {
+	        i++;
+	    }
+
+	    if (i == s.length()) return 0;
+	    
+        while (i < s.length() && !isWordSeparator(s.charAt(i))) {
+            i++;
+        }
+
+        while (i < s.length() && isWordSeparator(s.charAt(i))) {
+            i++;
+        }
+
+        if (i == s.length()) return 1;
+
+
+        while (i < s.length() && !isWordSeparator(s.charAt(i))) {
+            i++;
+        }
+
+        while (i < s.length() && isWordSeparator(s.charAt(i))) {
+            i++;
+        }
+        if (i == s.length()) return 2;
+
+        return 3;
+	}
+	
 	// Returns all sub-token spans of t=n-,n,n+ that contain n.
 	// n is the token starting at offset from text.
 	static public Vector<TokenSpan> getTokenSpans(String text, int offset, int length) {

@@ -15,7 +15,7 @@ import entity_linking.input_data_pipeline.*;
 
 // Extract a set with all entities from the Wikilinks corpus and their doc frequencies
 public class ExtractEntsWithFreq {
-    private static void fromFile(String filename, HashMap<String, Integer> freqMap) throws IOException {		
+    private static int fromFile(String filename, HashMap<String, Integer> freqMap) throws IOException {		
         System.err.println("Processing file " + filename);
 
         WikilinksParser p = new WikilinksParser(filename);
@@ -40,6 +40,7 @@ public class ExtractEntsWithFreq {
                 freqMap.put(url, freqMap.get(url) + 1);
             }
         }
+        return doc_index;
     }	
 	
 
@@ -62,8 +63,7 @@ public class ExtractEntsWithFreq {
 		    if (!filename.endsWith(".data")) {
 		        continue;       
 		    }
-		    fromFile(dir_file + filename, freqMap);
-		    total_nr_docs++;
+		    total_nr_docs += fromFile(dir_file + filename, freqMap);
 		}
 
 		PrintWriter writer = new PrintWriter(out_file, "UTF-8");		

@@ -175,6 +175,10 @@ public class ComputeCrosswikisProbs {
         
         PrintWriter writer = new PrintWriter(out_file, "UTF-8");
         for (String url : entStats.keySet()) {
+            if (entStats.get(url).numAnchors < 5) { // Keep just entities for which at least 5 anchors exist
+                continue;
+            }
+            
             Vector<NameEntry> v = new Vector<NameEntry>();
             for (Entry<String,Integer> e: entStats.get(url).nameFreqs.entrySet()) {
                 v.add(new NameEntry(e.getKey(), e.getValue()));
