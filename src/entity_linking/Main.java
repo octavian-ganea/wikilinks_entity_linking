@@ -1,8 +1,11 @@
 package entity_linking;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.StringTokenizer;
 import java.util.Vector;
 
 import entity_linking.input_data_pipeline.*;
@@ -10,6 +13,38 @@ import entity_linking.input_data_pipeline.*;
 public class Main {    
 	///////////////////// MAIN ////////////////////////////////////////////
 	public static void main(String[] args) throws Exception {
+	    /*
+	    System.out.println("<iitb.CSAW.entityAnnotations>");
+	    BufferedReader in = new BufferedReader(new FileReader("iitb_foundbyme0_0001_final"));
+	    String line = in.readLine();
+	    while (line != null) {
+	        if (line.contains("DOC: ")) {
+	            System.out.println("<annotation>");
+	            System.out.println("\t<docName>" + line.substring(line.indexOf("DOC: ") + "DOC: ".length()) + "</docName>");
+	            System.out.println("\t<userId>ganeao@inf.ethz.ch</userId>");
+	        }
+	        if (line.contains("NAME: ")) {
+	            int nameLen = line.substring(line.indexOf("NAME: ") + "NAME: ".length()).length();
+	            line = in.readLine();
+	            
+	            int offset = Integer.parseInt(line.substring(line.indexOf("OFFSET: ") + "OFFSET: ".length()));
+	            line = in.readLine();
+	            
+	            String url = line.substring(line.indexOf("URL: ") + "URL: ".length());
+
+	            System.out.println("\t<wikiName>" + url.substring(url.indexOf("en.wikipedia.org/wiki/") + "en.wikipedia.org/wiki/".length()).replace('_', ' ') + "</wikiName>");
+	            System.out.println("\t<offset>" + offset + "</offset>");
+                System.out.println("\t<length>" + nameLen + "</length>");
+	            System.out.println("</annotation>");
+	        }
+	        
+            line = in.readLine();
+	    }
+	        
+	    System.out.println("</iitb.CSAW.entityAnnotations>");
+	    System.exit(1);
+	    */
+	    
 	    
 	    // Compute p(\exist ent | name) in a different fashion using the Crosswikis data.
         // INPUT: args[0] = file with all entities from Wikilinks generated with [ExtractEntsWithFreq]
@@ -121,7 +156,7 @@ public class Main {
 			GenCandidateEntityNamePairs.run(
 					args[0], args[1], args[2], args[3], "weightedByDictScore", 1.0,
 					Double.parseDouble(args[4]), inputPagesIterator,
-					args[6].contains("[extended-token-span]"), !args[7].contains("[no-dummy]"));
+					args[6].contains("[extended-token-span]"), !args[7].contains("[no-dummy]"), false);
 			return;
 		}
 		
@@ -137,7 +172,7 @@ public class Main {
         //        args[6] = theta
         //        args[7] = IITB ground truth annotations XML filename
 		//        args[8] = IITB directory containing all the text documents
-        //        args[9] = [simple] or [extended-token-span]
+        //        args[9] = [simple] or [extended-token-span] or [baseline]
         //        args[10] = [dummy] or [no-dummy]
         //        args[11] = [IITB-testing]
         // OUTPUT: stdout
@@ -146,13 +181,13 @@ public class Main {
                 System.err.println("Invalid param " + args[10]);
                 System.exit(1);
             }
-            if (args[9].compareTo("[simple]") != 0 && args[9].compareTo("[extended-token-span]") != 0) {
+            if (!args[9].equals("[simple]") && !args[9].equals("[extended-token-span]") && !args[9].equals("[baseline]")) {
                 System.err.println("Invalid param " + args[9]);
                 System.exit(1);
             }            
             Utils.loadWikiRedirects("wikiRedirects/wikipedia_redirect.txt");
             
-            IITBPagesIterator iitbIterator = new IITBPagesIterator(args[7], args[8]);
+            IITBPagesIterator iitbIterator = new IITBPagesIterator(args[7], "evalData/IITB/iitb_foundbyme0_0001_final.xml", args[8]);
 
             int totalnrdocs = 0, totalnrmentions = 0;
             while (iitbIterator.hasNext()) {
@@ -162,13 +197,17 @@ public class Main {
             System.err.println("[NRDOCS in IITB] " + totalnrdocs);
             System.err.println("[TOTAL GROUND TRUTH MENTIONS IN IITB] " + totalnrmentions);
             
-            iitbIterator = new IITBPagesIterator(args[7], args[8]);
+            iitbIterator = new IITBPagesIterator(args[7], "evalData/IITB/iitb_foundbyme0_0001_final.xml", args[8]);
             
+            boolean baseLine = false;
+            if (args[9].equals("[baseline]")) {
+                baseLine = true;
+            }
             
             GenCandidateEntityNamePairs.run(
                     args[0], args[1], args[2], args[3], args[4], Double.parseDouble(args[5]), 
                     Double.parseDouble(args[6]), iitbIterator,
-                    args[9].contains("[extended-token-span]"), !args[10].contains("[no-dummy]"));
+                    args[9].contains("[extended-token-span]"), !args[10].contains("[no-dummy]"), baseLine);
             return;
         }		
 		

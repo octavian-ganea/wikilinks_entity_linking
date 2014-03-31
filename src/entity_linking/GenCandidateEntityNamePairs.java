@@ -427,14 +427,8 @@ public class GenCandidateEntityNamePairs {
             System.out.print("; p(e|n)=" + c.debug.prob_e_cond_n + "; p(e in E)=" + c.debug.prob_e_in_E_times_nr_docs);
             System.out.println("; denominator=" + c.debug.denominator + "; p(d|n)/(1-p(d|n)) = " + c.debug.dummy_contribution);
 
-            int start = c.textIndex - 50;
-            if (start < 0) {
-                start = 0;
-            }
-            int end = c.textIndex + 50;
-            if (end >= doc.getRawText().length()) {
-                end = doc.getRawText().length() - 1;
-            }
+            int start = Math.max(0, c.textIndex - 50);
+            int end = Math.min(c.textIndex + 50, doc.getRawText().length() - 1);
 
             System.out.println(";context=" + doc.getRawText().substring(start, end).replace('\n', ' '));
 
@@ -454,6 +448,94 @@ public class GenCandidateEntityNamePairs {
     }
 
 
+    /* Baseline approach: 
+     * - Mention detection: the same as we do now: select candidate token spans n by considering each e \in E and all names n with p(n|e) >= theta
+     * - Link generation: for each name, select the highest e in E ranked by p(e|n,\exists e) , or DUMMY if such an entity does not exist
+     */
+    private static Vector<Candidate> GenWinningEntitiesWithBaselineApproach(
+            GenericSinglePage doc,
+            Vector<Candidate> candidates,
+            HashSet<String> docEntities,
+            boolean includeDummyEnt,
+            // TODO: delete this in the end
+            HashMap<String,HashMap<String, Boolean>> debugMentionsInfos) {
+
+        Vector<Candidate> winnerMatchings = new Vector<Candidate>();
+        
+        // This is used just to know if a winner was printed or not.
+        // The same (e,n,offset) might be discovered from multiple candidates in this token span approach.
+        HashSet<String> winnersSerialized = new HashSet<String>();
+        
+        HashSet<String> serializedMentions = new HashSet<String>();
+        for (TruthMention m : doc.truthMentions) {
+            serializedMentions.add(m.wikiUrl + "\t" + m.anchorText + "\t" + m.mentionOffsetInText);
+        }
+             
+        for (Candidate cand : candidates) {
+            String winnerURL= "DUMMY";
+            double winnerScore = 0.0;
+            String winnerName = cand.name;
+            int winnerOffset = cand.textIndex;
+            
+            if (!dict.containsKey(winnerName) || !dummyProbabilities.containsKey(winnerName) || dummyProbabilities.get(winnerName).getScore() < 0.0001) {
+                continue;
+            }
+            
+            for (String url : dict.get(winnerName).keySet()) {
+                if (docEntities.contains(url) && winnerScore < dict.get(winnerName).get(url)) {
+                    winnerURL = url;
+                    winnerScore = dict.get(winnerName).get(url);
+                }
+            }
+                        
+            String winnerKey = winnerURL + "\t" + winnerName + "\t" + winnerOffset;
+            if (winnersSerialized.contains(winnerKey) || winnerURL.equals("DUMMY")) {
+                continue;
+            }
+            winnersSerialized.add(winnerKey);
+            
+            //System.out.println(winnerKey);
+            if (serializedMentions.contains(winnerKey)) {
+             //   System.out.println("## GOOD RESULT ##");
+            } else {
+                System.out.println("\nDOC: " + doc.pageName);
+                System.out.println("NAME: " + winnerName);
+                System.out.println("OFFSET: " + winnerOffset);
+                System.out.println("URL: en.wikipedia.org/wiki/" + winnerURL);
+                
+                int start = Math.max(0, winnerOffset - 30);
+                int end = Math.min(winnerOffset + 30, doc.getRawText().length() - 1);
+
+                String context = doc.getRawText().substring(start, end).replace('\n', ' ');
+
+                System.out.println("CONTEXT: \"" + context + "\"");
+            //    System.out.println("## ANNOTATION ##\n");    
+
+//                System.out.println("## NEW ANNOT ##");
+            }
+//            System.out.println("## ANNOTATION ##\n");    
+        }
+        
+        return winnerMatchings;
+    }
+    
+    
+    // Tells if name n1 should be chosen over n2 when we know the given entity e.
+    /* Implements an heuristic to overpass errors in Crosswikis inv.dict
+     * - if p(n1|e) / p(n2|e) is > 5 or < 0.2, then we know the order.
+     * - else if p(n1|e) / p(n2|e) \in (0.2, 5), then these 2 probs might be in any possible order; 
+     * -     so, we look at p(e/n1) / p(e|n2) and if it is > 2 or < 0.5, then we know the exact order. 
+     * -     else, we take the order of p(n1|e) with p(n2|e)
+     */
+    private static boolean isBetterNameGivenEntity(double prob_n1_cond_e, double prob_e_cond_n1, double prob_n2_cond_e, double prob_e_cond_n2) {
+        if (prob_n1_cond_e >= 5 * prob_n2_cond_e ||
+                (prob_n1_cond_e > 0.2 * prob_n2_cond_e && prob_e_cond_n1 >= 2 * prob_e_cond_n2) ||
+                (prob_n1_cond_e >       prob_n2_cond_e && prob_e_cond_n1  < 2 * prob_e_cond_n2 && prob_e_cond_n1 >= 0.5 * prob_e_cond_n2)) {
+            return true;
+        }
+        return false;
+    }
+    
     /*  Extended token span approach.
      *  Steps: 
      *** retain the set of (name, page_offset) for each page
@@ -498,11 +580,11 @@ public class GenCandidateEntityNamePairs {
 
         // This is used just to know if a winner was printed or not.
         // The same (e,n,offset) might be discovered from multiple candidates in this token span approach.
-        HashSet<String> winners = new HashSet<String>();
+        HashSet<String> winnersSerialized = new HashSet<String>();
         
         // for each (n, offset):
         for (String key : namesOfCandidates) {            
-            System.out.println("\nNOW ANALYZE CAND: " + key);
+            System.out.println("\nNOW ANALYZE CAND: " + key + " ;docName=" + doc.pageName);
             
             String name = key.substring(0, key.lastIndexOf('\t'));
             int offset = Integer.parseInt(key.substring(name.length() + 1));
@@ -555,8 +637,27 @@ public class GenCandidateEntityNamePairs {
                         continue;
                     }
                     
-                    System.out.println("     Adding to numerator: extendedname=" + extendedName + ";url=" + entity + ";1-dummyProb=" + (1-dummyProb) + ";entsDocFreqsInWikilinks=" +entsDocFreqsInCorpus.get(entity) +
-                            ";final adding=" + (dict.get(extendedName).get(entity) * totalNumDocs / entsDocFreqsInCorpus.get(entity) * (1-dummyProb)));
+                    // TODO: delete this
+                    boolean printed = false;
+                    if (indexOfCandidates.containsKey(extendedName)) {
+                        for (Candidate cand : indexOfCandidates.get(extendedName)) {
+                            if (cand.textIndex == offset && cand.entityURL.equals(entity) && cand.name.equals(extendedName)) {
+                                System.out.println("     Adding to numerator: extendedname=" + extendedName + ";url=" + entity + " ;p(∃e| n)=" + (1-dummyProb) +
+                                        " ;p(e|n,∃e)=" + dict.get(extendedName).get(entity) +
+                                        " ;p(n|e)=" + cand.prob_n_cond_e +
+                                        " ;entsDocFreqs=" +entsDocFreqsInCorpus.get(entity) +
+                                        " ;final adding=" + (dict.get(extendedName).get(entity) * totalNumDocs / entsDocFreqsInCorpus.get(entity) * (1-dummyProb)) );
+                                  printed = true;
+                            }
+                        }
+                    }
+                    if (!printed) {
+                        System.out.println("     Adding to numerator (NOT A CAND): extendedname=" + extendedName + ";url=" + entity + " ;p(∃e| n)=" + (1-dummyProb) +
+                                " ;p(e|n,∃e)=" + dict.get(extendedName).get(entity) +
+                                " ;entsDocFreqs=" +entsDocFreqsInCorpus.get(entity) +
+                                " ;final adding=" + (dict.get(extendedName).get(entity) * totalNumDocs / entsDocFreqsInCorpus.get(entity) * (1-dummyProb)) );                     
+                    }
+
                     numerator += dict.get(extendedName).get(entity) * totalNumDocs / entsDocFreqsInCorpus.get(entity) * (1-dummyProb);
                 }
 
@@ -609,6 +710,20 @@ public class GenCandidateEntityNamePairs {
             } 
 
             if (includeDummyEnt && dummyScore > 0 && dummyScore > winnerScore) {
+                // TODO: delete this, it might take a long time to finish
+                for (TruthMention m : doc.truthMentions) {
+                    if (offset == m.mentionOffsetInText && name.compareTo(m.anchorText) == 0) {
+                        String key2 = "URL=" + m.wikiUrl + ";name=" + m.anchorText + ";offset=" + m.mentionOffsetInText;
+                        System.out.println("## SHOULD HAVE BEEN A TRUTH MENTION ##: " + key2);
+                        
+                        String key3 = "URL=" + m.wikiUrl + ";name=" + m.anchorText + ";offset=" + m.mentionOffsetInText + ";doc=" + doc.pageName;                        
+                        if (!debugMentionsInfos.get(key3).get("isCandidate")) System.out.println("  NOT A CANDIDATE");
+                        if (!debugMentionsInfos.get(key3).get("EntIsInInvdict")) System.out.println("  ENT NOT IN INVDICT");
+                        if (!debugMentionsInfos.get(key3).get("NameIsInInvdictForEnt")) System.out.println("  NAME NOT IN INVDICT FOR ENT");
+                        if (!debugMentionsInfos.get(key3).get("EntIsInAllEnts")) System.out.println("  ENT NOT IN ALL ENTS");
+                    }
+                }
+
                 System.out.println("  WINNER URL FOR CAND: ## DUMMY ##" );
                 continue;
             }
@@ -616,10 +731,11 @@ public class GenCandidateEntityNamePairs {
                 System.out.println("## DUMMY WORSE THAN ME ###");
             }
             System.out.println("  WINNER URL FOR CAND: " + winnerURL);
-
+            System.out.println("----NOW FINDING THE PROPER TOKEN SPAN :");
             
             String winnerName = "";
-            double winnerNameCondProbability = 0.0;
+            double winnerProb_name_cond_ent = 0.0;
+            double winnerProb_ent_cond_name = 0.0;
             int winnerOffset = -1;
             for (TokenSpan ts : surroundingTokenSpans) {
                 // extract n'
@@ -631,70 +747,59 @@ public class GenCandidateEntityNamePairs {
                     continue;
                 }
                 
+                // Heuristic to overpass errors in Crosswikis inv.dict
+                if (extendedName.toLowerCase().equals(winnerURL.replace('_', ' ').toLowerCase())) {
+                    winnerName = extendedName;
+                    winnerProb_name_cond_ent = 5.0;
+                    winnerProb_ent_cond_name = 1.0;
+                    winnerOffset = ts.start;
+                    break;
+                }
+                
                 // This might be improved to a O(1) by using a HashSet
                 for (Candidate cand : indexOfCandidates.get(extendedName)) {
                     if (cand.entityURL.compareTo(winnerURL) == 0 && ts.start == cand.textIndex) {
-                        System.out.println("  CAND APPEARING IN REALITY :::" + extendedName + " ;url=" + cand.entityURL + 
+                        System.out.println("     CAND APPEARING HERE :::" + extendedName + " ;url=" + cand.entityURL + 
                                 " ;p(n|e)=" + cand.prob_n_cond_e + "; p(e|n,∃e)=" + dict.get(extendedName).get(winnerURL) + "; offset=" + cand.textIndex);
                     } 
                         
-                    if (cand.entityURL.compareTo(winnerURL) == 0 && cand.prob_n_cond_e > winnerNameCondProbability && ts.start == cand.textIndex) {
-                        System.out.println("  BETTER CAND :::" + extendedName + " ;url=" + winnerURL + " ;p(n|e)=" + cand.prob_n_cond_e +
-                                "; p(e|n,∃e)=" + dict.get(extendedName).get(winnerURL));
-                        winnerName = extendedName;
-                        winnerNameCondProbability = cand.prob_n_cond_e;
-                        winnerOffset = ts.start;
+                    if (cand.entityURL.compareTo(winnerURL) == 0 && dict.containsKey(extendedName) && dict.get(extendedName).containsKey(winnerURL) && ts.start == cand.textIndex) {
+                        if (isBetterNameGivenEntity(cand.prob_n_cond_e, dict.get(extendedName).get(winnerURL), winnerProb_name_cond_ent, winnerProb_ent_cond_name)) {
+                            winnerName = extendedName;
+                            winnerProb_name_cond_ent = cand.prob_n_cond_e;
+                            winnerProb_ent_cond_name = dict.get(extendedName).get(winnerURL) ;
+                            winnerOffset = ts.start;                           
+                        }
                     }
                 }
             }
-
-
+            String winnerKey = winnerURL + "\t" + winnerName + "\t" + winnerOffset;
             
             if (winnerOffset < 0) {
                 continue;
             }
-            
-            String winnerKey = winnerURL + "\t" + winnerName + "\t" + winnerOffset;
-
-            if (winners.contains(winnerKey)) {
-                continue;
-            }
-            winners.add(winnerKey);
 
             System.out.println("  WINNER NAME FOR CAND: " + winnerName + "::: winner offset " + winnerOffset + " ::: WINNER URL = " + winnerURL);
 
-            /*
-            if (!serializedMentions.contains(winnerKey)) {
-                System.err.println("  DOC: " + doc.pageName);
-                System.err.println("  NAME: " + winnerName);
-                System.err.println("  OFFSET: " + winnerOffset);
-                System.err.println("  URL: en.wikipedia.org/wiki/" + winnerURL);
-            } 
-            */           
+            if (winnersSerialized.contains(winnerKey)) {
+                System.out.println("## ALREADY FOUND BEFORE ##");
+                continue;
+            }
+            winnersSerialized.add(winnerKey);
+       
             
             if (dummyScore <= 0 || dummyScore <= winnerScore) {
                 Candidate c = new Candidate(winnerURL, null, winnerName, winnerOffset, -1);
                 c.posteriorProb = winnerScore;
-                c.prob_n_cond_e = winnerNameCondProbability;
+                c.prob_n_cond_e = winnerProb_name_cond_ent;
                 
-                int start = winnerOffset - 30;
-                if (start < 0) {
-                    start = 0;
-                }
-                int end = winnerOffset + 30;
-                if (end >= doc.getRawText().length()) {
-                    end = doc.getRawText().length() - 1;
-                }
+                int start = Math.max(0, winnerOffset - 30);
+                int end = Math.min(winnerOffset + 30, doc.getRawText().length() - 1);
 
                 c.debug.context = doc.getRawText().substring(start, end).replace('\n', ' ');
                 c.debug.initialName = name;
 
                 System.out.println("  CONTEXT: \"" + c.debug.context + "\"");
-
-                if (!serializedMentions.contains(winnerKey)) {
-              //      System.err.println("  CONTEXT: \"" + c.debug.context + "\"");
-              //      System.err.println();
-                }
                 winnerMatchings.add(c);
             }
             
@@ -703,30 +808,16 @@ public class GenCandidateEntityNamePairs {
             } else {
                 // TODO: delete this, it might take a long time to finish
                 for (TruthMention m : doc.truthMentions) {
-                    if (c.textIndex == m.mentionOffsetInText && c.entityURL.compareTo(m.wikiUrl) == 0 && c.name.compareTo(m.anchorText) == 0) {
-                        String key = "URL=" + m.wikiUrl + ";name=" + m.anchorText + ";offset=" + m.mentionOffsetInText + ";doc=" + doc.pageName;
-                        System.out.println("## UNFOUND MENTION ##: " + key);
+                    if (winnerOffset == m.mentionOffsetInText && winnerName.compareTo(m.anchorText) == 0) {
+                        String key2 = "URL=" + m.wikiUrl + ";name=" + m.anchorText + ";offset=" + m.mentionOffsetInText;
+                        System.out.println("## SHOULD HAVE BEEN A TRUTH MENTION ##: " + key2);
                         
-                        if (!debugMentionsInfos.get(key).get("isCandidate")) System.out.println("  NOT A CANDIDATE");
-                        if (!debugMentionsInfos.get(key).get("EntIsInInvdict")) System.out.println("  ENT NOT IN INVDICT");
-                        if (!debugMentionsInfos.get(key).get("NameIsInInvdictForEnt")) System.out.println("  NAME NOT IN INVDICT FOR ENT");
-                        if (!debugMentionsInfos.get(key).get("EntIsInAllEnts")) System.out.println("  ENT NOT IN ALL ENTS");
+                        String key3 = "URL=" + m.wikiUrl + ";name=" + m.anchorText + ";offset=" + m.mentionOffsetInText + ";doc=" + doc.pageName;                        
+                        if (!debugMentionsInfos.get(key3).get("isCandidate")) System.out.println("  NOT A CANDIDATE");
+                        if (!debugMentionsInfos.get(key3).get("EntIsInInvdict")) System.out.println("  ENT NOT IN INVDICT");
+                        if (!debugMentionsInfos.get(key3).get("NameIsInInvdictForEnt")) System.out.println("  NAME NOT IN INVDICT FOR ENT");
+                        if (!debugMentionsInfos.get(key3).get("EntIsInAllEnts")) System.out.println("  ENT NOT IN ALL ENTS");
 
-                        for (Candidate c : candidates) {
-                            if (c.textIndex == m.mentionOffsetInText) {
-                                System.out.println("  [NORMAL CAND] url=" + c.entityURL + "; name=" + c.name + "; p(n|e)=" + c.prob_n_cond_e + "; p(e|n,∃e)=" + dict.get(c.name).get(c.entityURL) + "; offset=" + c.textIndex);
-                               
-                            }
-                        }
-                        for (Candidate c : winnerMatchings) {
-                            if (c.textIndex == m.mentionOffsetInText) {
-                                System.out.println("  [WINNER CAND] url=" + c.entityURL + "; initial name:" + c.debug.initialName + "; final name=" + c.name + "; p(n|e)=" + c.prob_n_cond_e + "; p(e|n,∃e)=" + dict.get(c.name).get(c.entityURL) + " ; winner entity score l(n \\in t, e)=" + c.posteriorProb + 
-                                        "; offset=" + c.textIndex + " ;context :::" + c.debug.context );
-                               
-                            }
-                        }
-
-                        System.out.println();
                     }
                 }
                 System.out.println("## NEW ANNOT ##");
@@ -757,8 +848,11 @@ public class GenCandidateEntityNamePairs {
 
                 for (Candidate c : candidates) {
                     if (c.textIndex == m.mentionOffsetInText) {
-                        System.out.println("  [NORMAL CAND] url=" + c.entityURL + "; name=" + c.name + "; p(n|e)=" + c.prob_n_cond_e + "; p(e|n,∃e)=" + dict.get(c.name).get(c.entityURL) + "; offset=" + c.textIndex);
-                       
+                        double prob_e_cond_n = 0.0;
+                        if (dict.containsKey(c.name) && dict.get(c.name).containsKey(c.entityURL)) {
+                            prob_e_cond_n = dict.get(c.name).get(c.entityURL);
+                        }
+                        System.out.println("  [NORMAL CAND] url=" + c.entityURL + "; name=" + c.name + "; p(n|e)=" + c.prob_n_cond_e + "; p(e|n,∃e)=" + prob_e_cond_n + "; offset=" + c.textIndex);
                     }
                 }
                 for (Candidate c : winnerMatchings) {
@@ -774,7 +868,117 @@ public class GenCandidateEntityNamePairs {
         }
 
         
-        return winnerMatchings;
+        /*
+         * Heuristic to implement: if 2 winning (n1, e) and (n2,e) have n1 and n2 overlapping, keep just the one with highest p(n|e) (or more exactly, with the highest isBetterNameGivenEntity).
+         * Solve cases like:
+         * DOC: 13Oct08AmitHealth12.txt
+           NAME: melons,
+           OFFSET: 6410
+           URL: en.wikipedia.org/wiki/List_of_melons
+           CONTEXT: "ew raw diet of mostly fruits, melons, some vegetables, raw ("
+        
+           NAME: melons  -- also a winner ent
+           
+           TODO: optimize this !!
+         */
+        Vector<Candidate> winnerMatchingsWithoutOverlappingSameEnts = new Vector<Candidate>();
+        for (Candidate c1 : winnerMatchings) {
+            boolean wins = true;
+            Candidate better = null;
+            
+            if (!dict.containsKey(c1.name) || !dict.get(c1.name).containsKey(c1.entityURL)) {
+                wins = false;
+            } else {
+                for (Candidate c2 : winnerMatchings) {
+                    if (!c1.entityURL.equals(c2.entityURL)) continue;
+                    if (c1.textIndex + c1.name.length() <= c2.textIndex) continue;
+                    if (c2.textIndex + c2.name.length() <= c1.textIndex) continue;
+                    if ( dict.containsKey(c2.name) && dict.get(c2.name).containsKey(c2.entityURL) &&
+                         isBetterNameGivenEntity(c2.prob_n_cond_e, dict.get(c2.name).get(c2.entityURL), c1.prob_n_cond_e, dict.get(c1.name).get(c1.entityURL))
+                           ) {
+                        wins = false;
+                        better = c2;
+                        break;
+                    }
+                }
+            }
+            
+            if (wins) {
+                winnerMatchingsWithoutOverlappingSameEnts.add(c1);
+            } else {
+                String winnerKey = c1.entityURL + "\t" + c1.name + "\t" + c1.textIndex;
+                if (serializedMentions.contains(winnerKey)) {
+                    System.out.println("## WE LOST GOOD ## url=" +c1.entityURL + " ;name=\n" + c1.name + " ;p(n|e)=" + c1.prob_n_cond_e + " ;p(e|n)=" +
+                            dict.get(c1.name).get(c1.entityURL) + 
+                            " -- in favor of -- \n" + better.name + " ;p(n|e)=" + better.prob_n_cond_e + " ;p(e|n)=" +
+                            dict.get(better.name).get(better.entityURL) + "\n");
+                }
+            }
+        }
+        
+        for (Candidate c : winnerMatchingsWithoutOverlappingSameEnts) {
+            String winnerURL = c.entityURL;
+            String winnerName = c.name;
+            int winnerOffset = c.textIndex;
+            
+            String winnerKey = winnerURL + "\t" + winnerName + "\t" + winnerOffset;
+
+            
+            if (!serializedMentions.contains(winnerKey)) {
+                /*
+                System.err.println("  DOC: " + doc.pageName);
+                System.err.println("  NAME: " + winnerName);
+                System.err.println("  OFFSET: " + winnerOffset);
+                System.err.println("  URL: " + winnerURL);
+            
+                int start = Math.max(0, winnerOffset - 30);
+                int end = Math.min(winnerOffset + 30, doc.getRawText().length() - 1);
+                c.debug.context = doc.getRawText().substring(start, end).replace('\n', ' ');
+
+                System.err.println("  CONTEXT: \"" + c.debug.context + "\"");
+                System.err.println();
+                */
+            }
+            
+            
+            System.out.println("FINALL: " + winnerKey);
+            if (serializedMentions.contains(winnerKey)) {
+                System.out.println("## GOOD RESULT FINALL ##");
+            } else {
+                System.out.println("## NEW ANNOT FINALL ##");
+            }
+            System.out.println("## ANNOTATION FINALL ##");
+    
+        }
+        
+        
+        
+        // TODO: delete this, it might take a long time to finish
+        for (TruthMention m : doc.truthMentions) {
+            boolean wasFound = false;
+            for (Candidate c : winnerMatchingsWithoutOverlappingSameEnts) {
+                if (c.textIndex == m.mentionOffsetInText && c.entityURL.compareTo(m.wikiUrl) == 0 && c.name.compareTo(m.anchorText) == 0) {
+                    wasFound = true;
+                    break;
+                }
+            }  
+            
+            if (!wasFound) {
+                System.err.println("  DOC: " + doc.pageName);
+                System.err.println("  NAME: " + m.anchorText );
+                System.err.println("  OFFSET: " + m.mentionOffsetInText);
+                System.err.println("  URL: " + m.wikiUrl);
+            
+                int start = Math.max(0, m.mentionOffsetInText - 30);
+                int end = Math.min(m.mentionOffsetInText + 30, doc.getRawText().length() - 1);
+                String context = doc.getRawText().substring(start, end).replace('\n', ' ');
+
+                System.err.println("  CONTEXT: \"" + context + "\"");
+                System.err.println();
+                
+            }
+        }
+        return winnerMatchingsWithoutOverlappingSameEnts;
     }
 
     
@@ -816,7 +1020,8 @@ public class GenCandidateEntityNamePairs {
             Double theta, 
             GenericPagesIterator inputPagesIterator,
             boolean extendedTokenSpan,
-            boolean includeDummyEnt) throws IOException, InterruptedException {
+            boolean includeDummyEnt,
+            boolean baseLine) throws IOException, InterruptedException {
 
         LoadAllEntities(allEntitiesFilename);
 
@@ -867,8 +1072,7 @@ public class GenCandidateEntityNamePairs {
             }
             
             if (extendedTokenSpan) {
-                Vector<Candidate> matchings = 
-                    GenWinningEntitiesWithExtendedTokenSpan(doc, allCandidates.get(nr_page), docEntities, includeDummyEnt, debugMentionsInfos);
+                Vector<Candidate> matchings = GenWinningEntitiesWithExtendedTokenSpan(doc, allCandidates.get(nr_page), docEntities, includeDummyEnt, debugMentionsInfos);
                 
                 /*
                 TreeMap<Integer, Candidate> sortedByOffsetMatchings = new TreeMap<Integer, Candidate>();
@@ -979,6 +1183,8 @@ public class GenCandidateEntityNamePairs {
                     }
                 }
                 */
+            } else if (baseLine) {
+                Vector<Candidate>  matchings = GenWinningEntitiesWithBaselineApproach(doc, allCandidates.get(nr_page), docEntities, includeDummyEnt, debugMentionsInfos);
             } else {
                 GenWinningEntities(doc, allCandidates.get(nr_page), docEntities, includeDummyEnt);
             }

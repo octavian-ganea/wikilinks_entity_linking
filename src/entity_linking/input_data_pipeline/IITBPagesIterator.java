@@ -43,23 +43,12 @@ public class IITBPagesIterator implements GenericPagesIterator {
     private int currentCounter;
     
     private String groundTruthAnnotationsFilename;
+    private String auxGroundTruthAnnotationsFilename;
     private String pagesDir;
     
-    // Constructor that builds a PagesIterator over the IITB data.
-    public IITBPagesIterator(String groundTruthAnnotationsFilename, String pagesDir) throws SAXException, IOException, ParserConfigurationException {
-        if (!pagesDir.endsWith("/")) {
-            pagesDir += "/";
-        }
-        
-        this.groundTruthAnnotationsFilename = groundTruthAnnotationsFilename;
-        this.pagesDir = pagesDir;
-        
-        // Find the set of all docs that have annotations.
-        TreeSet<String> uniqueFileNames = new TreeSet<String>();
-        // Map from the file name to a map of <offset, truth_mention> containing all the truth mentions from that page.
-        TreeMap<String, Vector<Annotation>> annotations = new TreeMap<String, Vector<Annotation>>();
-        
-        
+    
+    // Parses the XML groundTruthAnnotationsFilename and inserts all the annotations in the annotationsTree.
+    private void insertGroundTruthAnnotations(String groundTruthAnnotationsFilename, TreeMap<String, Vector<Annotation>> annotationsTree) throws SAXException, IOException, ParserConfigurationException {
         // Parse the XML file and extract all <docName> names.
         File fXmlFile = new File(groundTruthAnnotationsFilename);
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -75,9 +64,8 @@ public class IITBPagesIterator implements GenericPagesIterator {
             if (nNode.getNodeType() == Node.ELEMENT_NODE) {
                 Element eElement = (Element) nNode;
                 String docName = eElement.getElementsByTagName("docName").item(0).getTextContent();        
-                uniqueFileNames.add(docName);
-                if (!annotations.containsKey(docName)) {
-                    annotations.put(docName, new Vector<Annotation>());
+                if (!annotationsTree.containsKey(docName)) {
+                    annotationsTree.put(docName, new Vector<Annotation>());
                 }
                 
                 String wikiName = eElement.getElementsByTagName("wikiName").item(0).getTextContent();
@@ -85,17 +73,35 @@ public class IITBPagesIterator implements GenericPagesIterator {
 
                 int offset = Integer.parseInt(eElement.getElementsByTagName("offset").item(0).getTextContent());
                 int length = Integer.parseInt(eElement.getElementsByTagName("length").item(0).getTextContent());
-                annotations.get(docName).add(new Annotation(docName, wikiName, offset, length));
+                annotationsTree.get(docName).add(new Annotation(docName, wikiName, offset, length));
             }
         }
-
+    }
+    
+    // Constructor that builds a PagesIterator over the IITB data.
+    public IITBPagesIterator(String groundTruthAnnotationsFilename, String auxGroundTruthAnnotationsFilename, String pagesDir) throws SAXException, IOException, ParserConfigurationException {
+        if (!pagesDir.endsWith("/")) {
+            pagesDir += "/";
+        }
+        
+        this.groundTruthAnnotationsFilename = groundTruthAnnotationsFilename;
+        this.auxGroundTruthAnnotationsFilename = auxGroundTruthAnnotationsFilename;
+        this.pagesDir = pagesDir;
+        
+        // Map from the file name to a map of <offset, truth_mention> containing all the truth mentions from that page.
+        TreeMap<String, Vector<Annotation>> annotations = new TreeMap<String, Vector<Annotation>>();
+        
+        insertGroundTruthAnnotations(groundTruthAnnotationsFilename, annotations);
+        
+        if (auxGroundTruthAnnotationsFilename != null) {
+            insertGroundTruthAnnotations(auxGroundTruthAnnotationsFilename, annotations);
+        }
+        
         // Create an IITBSinglePage object for each of the documents found in the list uniqueFileNames.
         allDocs = new Vector<IITBSinglePage>();
 
-        Iterator<String> it = uniqueFileNames.iterator();
-        while (it.hasNext()) {
+        for (String docName : annotations.keySet()) {
             try {
-                String docName = it.next();
                // BufferedReader in =  new BufferedReader(new FileReader(pagesDir + docName));
                 String text = FileUtils.readFileToString(new File(pagesDir + docName), Charset.defaultCharset());
                 
@@ -137,7 +143,7 @@ public class IITBPagesIterator implements GenericPagesIterator {
     @Override
     public GenericPagesIterator hardCopy() {
         try {
-            return new IITBPagesIterator(groundTruthAnnotationsFilename, pagesDir);
+            return new IITBPagesIterator(groundTruthAnnotationsFilename, auxGroundTruthAnnotationsFilename, pagesDir);
         } catch (SAXException e) {
             e.printStackTrace();
         } catch (IOException e) {
