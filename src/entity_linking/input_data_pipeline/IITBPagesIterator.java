@@ -44,7 +44,7 @@ public class IITBPagesIterator implements GenericPagesIterator {
     
     private String groundTruthAnnotationsFilename;
     private String auxGroundTruthAnnotationsFilename;
-    private String pagesDir;
+    private String IITBDocsDir;
     
     
     // Parses the XML groundTruthAnnotationsFilename and inserts all the annotations in the annotationsTree.
@@ -79,14 +79,14 @@ public class IITBPagesIterator implements GenericPagesIterator {
     }
     
     // Constructor that builds a PagesIterator over the IITB data.
-    public IITBPagesIterator(String groundTruthAnnotationsFilename, String auxGroundTruthAnnotationsFilename, String pagesDir) throws SAXException, IOException, ParserConfigurationException {
-        if (!pagesDir.endsWith("/")) {
-            pagesDir += "/";
+    public IITBPagesIterator(String groundTruthAnnotationsFilename, String auxGroundTruthAnnotationsFilename, String IITBDocsDir) throws SAXException, IOException, ParserConfigurationException {
+        if (!IITBDocsDir.endsWith("/")) {
+            IITBDocsDir += "/";
         }
         
         this.groundTruthAnnotationsFilename = groundTruthAnnotationsFilename;
         this.auxGroundTruthAnnotationsFilename = auxGroundTruthAnnotationsFilename;
-        this.pagesDir = pagesDir;
+        this.IITBDocsDir = IITBDocsDir;
         
         // Map from the file name to a map of <offset, truth_mention> containing all the truth mentions from that page.
         TreeMap<String, Vector<Annotation>> annotations = new TreeMap<String, Vector<Annotation>>();
@@ -102,8 +102,8 @@ public class IITBPagesIterator implements GenericPagesIterator {
 
         for (String docName : annotations.keySet()) {
             try {
-               // BufferedReader in =  new BufferedReader(new FileReader(pagesDir + docName));
-                String text = FileUtils.readFileToString(new File(pagesDir + docName), Charset.defaultCharset());
+               // BufferedReader in =  new BufferedReader(new FileReader(IITBDocsDir + docName));
+                String text = FileUtils.readFileToString(new File(IITBDocsDir + docName), Charset.defaultCharset());
                 
                 Vector<TruthMention> truthMentions = new Vector<TruthMention>();
                 
@@ -143,7 +143,7 @@ public class IITBPagesIterator implements GenericPagesIterator {
     @Override
     public GenericPagesIterator hardCopy() {
         try {
-            return new IITBPagesIterator(groundTruthAnnotationsFilename, auxGroundTruthAnnotationsFilename, pagesDir);
+            return new IITBPagesIterator(groundTruthAnnotationsFilename, auxGroundTruthAnnotationsFilename, IITBDocsDir);
         } catch (SAXException e) {
             e.printStackTrace();
         } catch (IOException e) {

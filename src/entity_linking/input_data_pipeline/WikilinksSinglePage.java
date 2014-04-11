@@ -2,6 +2,8 @@ package entity_linking.input_data_pipeline;
 
 import java.util.Vector;
 
+import entity_linking.Utils;
+
 public class WikilinksSinglePage extends GenericSinglePage {
 	int docId;
 	String pageUrl;
@@ -14,42 +16,51 @@ public class WikilinksSinglePage extends GenericSinglePage {
 	public void setAnnotatedText(String annotatedText) {
 	    rawText = annotatedText;
 	    cleanText();
+	    
+	    Vector<TruthMention> cleanedTruthMentions = new Vector<TruthMention>();
+	    for (TruthMention tm : truthMentions) {
+	        if (tm.mentionOffsetInText != -1) {
+	            cleanedTruthMentions.add(tm);
+	        }
+	    }
+	    truthMentions = cleanedTruthMentions;
 	}
 	
 	// Remove tags in the text.
 	private void cleanText() {
 		StringBuilder sb = new StringBuilder();
 		
+		char lastAddedChar = ' ';
 		for (int i = 0; i < rawText.length(); ++i) {
 			if (rawText.charAt(i) == '[' && rawText.indexOf("[[[start", i) == i) {
 				int mentionIndex = Integer.parseInt(
 				        rawText.substring(i + "[[[start ".length(), rawText.indexOf("]]]",i)));
+
+                i = rawText.indexOf("]]]",i) + "]]]".length();
+                
+                // including \n
+				while (Character.isWhitespace(rawText.charAt(i))) {
+				    if (!Character.isSpaceChar(rawText.charAt(i)) || !Character.isSpaceChar(lastAddedChar)) {
+				        sb.append(rawText.charAt(i));
+				        lastAddedChar = rawText.charAt(i);
+				    }
+                    i++;
+				}
 				int mentionOffset = sb.length();
 				
-				boolean wasSpace = (i > 0 && rawText.charAt(i-1) == ' ');
-
+				String anchor = truthMentions.get(mentionIndex).anchorText;
+				sb.append(anchor);
+				lastAddedChar = anchor.charAt(anchor.length() - 1);
+				
+				i = rawText.indexOf("[[[end", i);
 				i = rawText.indexOf("]]]",i) + "]]]".length();
-				if (wasSpace && rawText.charAt(i) == ' ') {
-				    i++;
-				}
-				if (rawText.charAt(i) == ' ') {
-				    mentionOffset++;
-				}
-				
-				int j = rawText.indexOf("[[[end", i);
-				for (;i<j;++i) {
-				    sb.append(rawText.charAt(i));
-				}
-				
-				wasSpace = (rawText.charAt(j-1) == ' ');
-				i = rawText.indexOf("]]]",j) + "]]]".length() - 1;
-				if (wasSpace && i < rawText.length() - 1 && rawText.charAt(i) == ' ') {
-				    i++;
-				}
 				
 				truthMentions.get(mentionIndex).mentionOffsetInText = mentionOffset;
 			} else {
-				sb.append(rawText.charAt(i));
+                if (!Character.isSpaceChar(rawText.charAt(i)) || !Character.isSpaceChar(lastAddedChar)) {
+                    sb.append(rawText.charAt(i));
+                    lastAddedChar = rawText.charAt(i);
+                }
 			}
 		}
 		rawText = sb.toString();

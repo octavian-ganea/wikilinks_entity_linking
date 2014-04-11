@@ -1,0 +1,69 @@
+# Config file for running a job. This contains the parameters given to the job
+# every line that starts with a # is a comment
+# No empty line inside one main configuration!
+# Params can be in any order inside one configuration.
+
+
+###############################################################################
+[IITB-testing]
+wikiRedirectsFile:wikiRedirects/wikipedia_redirect.txt
+invdictFilename: crosswikiPrunnedData/prunned_invdict_IITB
+dictFilename: crosswikiPrunnedData/prunned_dict_IITB
+contextProbsFilename:  contextsProbsIITB/probs.txt
+# file containing P(context | n,e)
+existenceProbsFilename: existenceProbsFromCrosswikis/probs.txt
+# P(\exists ent | name)
+valueToKeep : weightedByNumEntsScore
+# for existence dummy probs
+multiplyConst : 10.0
+# for existence dummy probs
+allEntsFilename : entsWithDocFrequencies/ents.txt
+# all entities from Wikilinks
+groundTruthAnnotationsFilename: evalData/IITB/CSAW_Annotations.xml
+# from IITB 
+IITBDocsDir: evalData/IITB/crawledDocs/
+theta: 0.0001
+# treshold for P(n|e)
+extendedTokenSpan: true
+# can be [simple] or [extended-token-span]
+includeDummyEnt: true
+baseLine: false
+# use baseline method instead of our algorithm
+improvedIITB:false 
+# false = standard iitb ; true = improved iitb using a new annotations file
+###############################################################################
+
+
+
+###############################################################################
+[ComputeExistenceOfNameAsEntity]
+wikiRedirectsFile : wikiRedirects/wikipedia_redirect.txt
+allEntsFilename : entsWithDocFrequencies/ents.txt
+# file with all entities from Wikilinks generated with [ExtractEntsWithFreq]
+allNamesFilename : namesWithDocFrequencies/names.txt
+# file with all names from Wikilinks generated with [ExtractNamesWithDocFreq]
+invdictSortedFilename : mergedCrosswikis/sortedByName_invdict.merged
+# sorted by name Invdict file generated with [SortInvdictByName]
+dictFilename : mergedCrosswikis/dict.merged
+###############################################################################
+
+
+
+
+###############################################################################
+[compute-context-probs]
+wikiRedirectsFile: wikiRedirects/wikipedia_redirect.txt
+allEntsFilename : entsWithDocFrequencies/ents.txt
+invdictFilename: crosswikiPrunnedData/prunned_invdict_IITB
+WikilinksDir: inputWikilinksData/annotated_sentences/
+groundTruthAnnotationsFilename: evalData/IITB/CSAW_Annotations.xml
+IITBDocsDir: evalData/IITB/crawledDocs/
+###############################################################################
+
+
+
+###############################################################################
+[SortInvdictByName]
+invdictFilename: crosswikiPrunnedData/prunned_invdict_IITB
+###############################################################################
+

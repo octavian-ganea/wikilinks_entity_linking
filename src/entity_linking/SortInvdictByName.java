@@ -9,13 +9,13 @@ import java.util.TreeMap;
 
 public class SortInvdictByName {
 
-    public static void run(String invdictfilename) throws IOException{        
+    public static void run(String invdictFilename) throws IOException{        
         // <url><tab><cprob><space><string>[<tab><score>[<space><score>]*]
         System.err.println("[INFO] Sorting inv.dict P(n|e) by their name ...");
 
         TreeMap<String, Vector<String>> map = new TreeMap<String,Vector<String>>();
         
-        BufferedReader in = new BufferedReader(new FileReader(invdictfilename));
+        BufferedReader in = new BufferedReader(new FileReader(invdictFilename));
         String line = in.readLine();
         int nr_line = 0;
 

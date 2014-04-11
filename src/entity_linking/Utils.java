@@ -1,6 +1,7 @@
 package entity_linking;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -96,7 +97,7 @@ public class Utils {
 	}
 	
 	static 	public boolean isWordSeparator(char c) {
-		if (Character.isWhitespace(c) || Character.isSpace(c) || c == ' ' || c == ',' || c == '"' || c == ':' || c == '.' || c == '-' ||  c == '?' || c == '!' || c == '(' ||
+		if (Character.isWhitespace(c) || Character.isSpaceChar(c) || c == ' ' || c == ',' || c == '"' || c == ':' || c == '.' || c == '-' ||  c == '?' || c == '!' || c == '(' ||
 				c == ')' || c == '[' || c == ']' || c == '+' || c == '*' || c == '=' || c == '\'' || c == '`' || c == '\n' ||
 				c == '\r' || c == ';' || c =='#') {
 		    return true;
@@ -191,4 +192,74 @@ public class Utils {
 		
 		return spans;
 	}
+	
+	
+    // Compute context = n1 U n2;
+    // return it only if it contains at most two words besides n1 and at most two words besides n2
+    public static String getContext(String n1, String n2) {
+        String rez = getContext_(n1,n2, 1);
+        if (rez.equals("")) {
+            return getContext_(n2,n1, 1);
+        }
+        return rez;
+    }
+
+    private static String getContext_(String n1, String n2, int numNeighTokens) {
+        if (n2.contains(n1)) {
+            int start =  n2.indexOf(n1), end = start + n1.length();
+            if ( (start == 0 || Utils.isWordSeparator(n2.charAt(start-1)) ) && 
+                    (end == n2.length() || Utils.isWordSeparator(n2.charAt(end)) ) &&
+                    Utils.NumTokens(n2.substring(0,start)) <= numNeighTokens &&
+                    Utils.NumTokens(n2.substring(end)) <= numNeighTokens) {
+                return n2;
+            }
+        }
+
+        for (int i = 0; i < n1.length(); ++i) {
+            if (( ( (n1.length() - i < n2.length()) && Utils.isWordSeparator(n2.charAt(n1.length() - i))) 
+                    || n1.length() - i == n2.length())
+                    && n2.startsWith(n1.substring(i))
+                    && (i == 0 || Utils.isWordSeparator(n1.charAt(i-1)) ) ) {
+                if (Utils.NumTokens(n1.substring(0,i)) <= numNeighTokens &&
+                        Utils.NumTokens(n2.substring(n1.length() - i)) <= numNeighTokens) {
+                    return n1.substring(0, i) + n2;
+                }
+            }
+        }
+        return "";
+    }
+    
+    
+    public static void WriteIITBGroundTruthFileInXMLFormat() throws IOException {
+        System.out.println("<iitb.CSAW.entityAnnotations>");
+        BufferedReader in = new BufferedReader(new FileReader("iitb_foundbyme0_0001_final"));
+        String line = in.readLine();
+        while (line != null) {
+            if (line.contains("DOC: ")) {
+                System.out.println("<annotation>");
+                System.out.println("\t<docName>" + line.substring(line.indexOf("DOC: ") + "DOC: ".length()) + "</docName>");
+                System.out.println("\t<userId>ganeao@inf.ethz.ch</userId>");
+            }
+            if (line.contains("NAME: ")) {
+                int nameLen = line.substring(line.indexOf("NAME: ") + "NAME: ".length()).length();
+                line = in.readLine();
+                
+                int offset = Integer.parseInt(line.substring(line.indexOf("OFFSET: ") + "OFFSET: ".length()));
+                line = in.readLine();
+                
+                String url = line.substring(line.indexOf("URL: ") + "URL: ".length());
+
+                System.out.println("\t<wikiName>" + url.substring(url.indexOf("en.wikipedia.org/wiki/") + "en.wikipedia.org/wiki/".length()).replace('_', ' ') + "</wikiName>");
+                System.out.println("\t<offset>" + offset + "</offset>");
+                System.out.println("\t<length>" + nameLen + "</length>");
+                System.out.println("</annotation>");
+            }
+            
+            line = in.readLine();
+        }
+        in.close();
+        
+        System.out.println("</iitb.CSAW.entityAnnotations>");
+        System.exit(1);
+    }
 }
