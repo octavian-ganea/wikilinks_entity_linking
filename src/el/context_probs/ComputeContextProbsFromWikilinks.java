@@ -23,6 +23,7 @@ import el.input_data_pipeline.iitb.IITBPagesIterator;
 import el.input_data_pipeline.wikilinks.WikilinksParser;
 import el.utils.Utils;
 import el.wikilinks_ents_or_names_with_freqs.LoadWikilinksEntsOrNamesWithFreqs;
+import el.wikipedia_redirects.WikiRedirects;
 import static org.junit.Assert.*;
 
 
@@ -71,7 +72,7 @@ public class ComputeContextProbsFromWikilinks {
             }
 
             String rawURL = st.nextToken();
-            String url = Utils.pruneURL(rawURL);
+            String url = WikiRedirects.pruneURL(rawURL);
             if (!url.equals(currentURL)) {
                 if (processCurrentURL) {
                     for (String mention : mentions) {

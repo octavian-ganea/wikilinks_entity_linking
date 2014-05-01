@@ -12,6 +12,7 @@ import java.util.TreeMap;
 import java.util.Vector;
 
 import el.utils.Utils;
+import el.wikipedia_redirects.WikiRedirects;
 
 //For printing Dict in descending order by score
 class DictEntry implements Comparable {
@@ -117,7 +118,7 @@ public class LoadCrosswikisDict {
             StringTokenizer stLeft = new StringTokenizer(left, " ");
             
             double cprob = Double.parseDouble(stLeft.nextToken());             
-            String url = Utils.pruneURL(stLeft.nextToken());           
+            String url = WikiRedirects.pruneURL(stLeft.nextToken());           
 
             if (!tmpDictEntriesForOneName.containsKey(url)) {
                 tmpDictEntriesForOneName.put(url, new CrosswikisProbabilityForDict());

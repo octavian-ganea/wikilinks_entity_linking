@@ -257,117 +257,6 @@ public class GenCandidateEntityNamePairs {
         return denominator;
     }
 
-    // numerator(e,n,E) = p(e|n)/(p(e \in E)
-    // score(candidate,E) = score(e,n,E) =  numerator(n,e,E) / (denominator(n,e,E) + p(dummy|n)/(1 - p(dummy|n))))
-    // Compute also debug values for candidate: 
-    //    - dummyPosteriorProb = score(dummy,n,E) = p(dummy|n) / ((1-p(dummy|n)) * (numerator(n,e,E)+denominator(n,e,E)))
-    private static void ComputeSimpleScoreForOneCandidate(
-            Candidate cand, 
-            HashSet<String> docEntities,
-            boolean withDummyEnt) {
-        
-        double numerator = dict.get(cand.name).get(cand.entityURL);
-        numerator *= totalNumDocs / entsDocFreqsInCorpus.get(cand.entityURL);
-
-        // Compute denominator = \sum_{e' \neq e} p(e'|n) \frac{1}{p(e' \not\in E)}
-        double denominator = ComputeDenominator(cand.name, cand.entityURL, docEntities);
-
-        // Insert dummy probabilities: p(dummy | n) / (1 - p(dummy|n))
-        double dummyContributionProb = 0.0;
-        
-        if (withDummyEnt && dummyProbabilities.containsKey(cand.name)) {
-            DummyIntPair dp = dummyProbabilities.get(cand.name);
-            if (dp.numDocsWithAnchorName == 0) {
-                dummyContributionProb = Double.POSITIVE_INFINITY;
-            } else {
-                dummyContributionProb = 
-                    (dp.numDocsWithName - dp.numDocsWithAnchorName + 0.0) / dp.numDocsWithAnchorName;
-            }
-        }
-        
-
-        if (denominator + dummyContributionProb == 0) {
-            cand.posteriorProb = Double.POSITIVE_INFINITY;
-        } else cand.posteriorProb = numerator / (denominator + dummyContributionProb);
-
-        // DEBUG VALUES:
-        cand.debug.dummy_contribution = dummyContributionProb;
-        cand.debug.dummyPosteriorProb = dummyContributionProb / (denominator + numerator);
-
-        cand.debug.prob_e_cond_n = dict.get(cand.name).get(cand.entityURL);
-        cand.debug.prob_e_in_E_times_nr_docs = entsDocFreqsInCorpus.get(cand.entityURL);
-        cand.debug.denominator = denominator;
-    }
-
-    // 2 steps: 
-    // ** for each candidate - compute posterior probability and keep the highest scored one for each (offset,name)
-    // ** for each winner candidate - print it and print debug info
-    private static void GenWinningEntities(
-            GenericSinglePage doc,
-            Vector<Candidate> candidates,
-            HashSet<String> docEntities,
-            boolean includeDummyEnt) {
-        
-        HashSet<String> serializedMentions = new HashSet<String>();
-        for (TruthMention m : doc.truthMentions) {
-            if (m.mentionOffsetInText >= 0) {
-                serializedMentions.add(m.wikiUrl + "\t" + m.anchorText + "\t" + m.mentionOffsetInText);
-            }
-        }
-        
-        // Winning candidates grouped by their starting index in allAnnotatedText
-        // Key of the hash map: allAnnotatedText offset + "\t" + name
-        HashMap<String, Candidate> winners = new HashMap<String,Candidate>();
-
-        // For each candidate, compute the score as described in formula (8).
-        for (Candidate cand : candidates) {				
-            if (!dict.containsKey(cand.name)) {
-                continue;
-            }
-            // if P(cand.wikiUrl | cand.name) = 0 , we ignore this candidate.
-            if (!dict.get(cand.name).containsKey(cand.entityURL)) {
-                continue;
-            }
-
-            ComputeSimpleScoreForOneCandidate(cand, docEntities, includeDummyEnt);
-
-            String key = cand.textIndex + "\t" + cand.name;
-            if ((!winners.containsKey(key) || winners.get(key).posteriorProb < cand.posteriorProb)) {	
-                //if (dummyPosteriorProb < cand.posteriorProb)
-                winners.put(key, cand);
-            }
-        }
-
-        // **************** WRITING WINNER CANDIDATES ******************************
-        for (Candidate c : winners.values()) {
-            System.out.println();
-            System.out.println("entity=" + c.entityURL + "; name=" + c.name + "; page offset=" +
-                    c.textIndex);
-            System.out.println("l(dummy,n)=" + c.debug.dummyPosteriorProb + "; l(e,n)=" + c.posteriorProb);
-            System.out.print("; P(n|e)=" + c.prob_n_cond_e );
-            System.out.print("; p(e|n)=" + c.debug.prob_e_cond_n + "; p(e in E)=" + c.debug.prob_e_in_E_times_nr_docs);
-            System.out.println("; denominator=" + c.debug.denominator + "; p(d|n)/(1-p(d|n)) = " + c.debug.dummy_contribution);
-
-            int start = Math.max(0, c.textIndex - 50);
-            int end = Math.min(c.textIndex + 50, doc.getRawText().length() - 1);
-
-            System.out.println(";context=" + doc.getRawText().substring(start, end).replace('\n', ' '));
-
-            if (c.debug.dummyPosteriorProb > 0 && c.debug.dummyPosteriorProb < c.posteriorProb) {
-                System.out.println("## DUMMY WORSE THAN ME ### ");
-            }
-
-            if (c.debug.dummyPosteriorProb > 0 && c.debug.dummyPosteriorProb >= c.posteriorProb) {
-                System.out.println("## DUMMY BETTER THAN ALL CANDIDATES ### ");
-            } else {
-                String key = c.entityURL +"\t" + c.name + "\t" + c.textIndex;      
-                if (serializedMentions.contains(key)) {
-                    System.out.println("## GOOD RESULT ##");
-                }
-            }
-        }
-    }
-
 
     /* Baseline approach: 
      * - Mention detection: the same as we do now: select candidate token spans n by considering each e \in E and all names n with p(n|e) >= theta
@@ -889,8 +778,7 @@ public class GenCandidateEntityNamePairs {
             double theta, 
             GenericPagesIterator inputPagesIterator,
             boolean extendedTokenSpan,
-            boolean includeDummyEnt,
-            boolean baseLine) throws IOException, InterruptedException {
+            boolean includeDummyEnt) throws IOException, InterruptedException {
         
         entsDocFreqsInCorpus = LoadWikilinksEntsOrNamesWithFreqs.load(allEntsFilename, "entities");
         
@@ -940,12 +828,10 @@ public class GenCandidateEntityNamePairs {
             if (extendedTokenSpan) {
                 Vector<Candidate> matchings = GenWinningEntitiesWithExtendedTokenSpan(doc, allCandidates.get(nr_page), docEntities, includeDummyEnt, debugMentionsInfos);
 
-                // Annotate the input doc.rawText using the newly found entities:
+                // Annotate the input doc.rawText using the new found entities:
                 // ExtractSentencesWithTheNewAnnotations.run(doc, matchings);
-            } else if (baseLine) {
-                Vector<Candidate>  matchings = GenWinningEntitiesWithBaselineApproach(doc, allCandidates.get(nr_page), docEntities, includeDummyEnt, debugMentionsInfos);
             } else {
-                GenWinningEntities(doc, allCandidates.get(nr_page), docEntities, includeDummyEnt);
+                Vector<Candidate>  matchings = GenWinningEntitiesWithBaselineApproach(doc, allCandidates.get(nr_page), docEntities, includeDummyEnt, debugMentionsInfos);
             }
         }
         System.err.println("[INFO] --------------- Done ---------------");

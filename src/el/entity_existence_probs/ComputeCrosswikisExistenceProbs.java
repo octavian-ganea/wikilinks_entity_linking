@@ -9,6 +9,7 @@ import java.util.TreeMap;
 
 import el.utils.Utils;
 import el.wikilinks_ents_or_names_with_freqs.LoadWikilinksEntsOrNamesWithFreqs;
+import el.wikipedia_redirects.WikiRedirects;
 
 // Computes p(\exists e | n) by looking at avg_e {p(n|e)/p(e|n,\exits e) * p(e)/p(n)} over all entities e
 public class ComputeCrosswikisExistenceProbs {
@@ -39,7 +40,7 @@ public class ComputeCrosswikisExistenceProbs {
             StringTokenizer stLeft = new StringTokenizer(left, " ");
             
             double cprob = Double.parseDouble(stLeft.nextToken());             
-            String url = Utils.pruneURL(stLeft.nextToken());  
+            String url = WikiRedirects.pruneURL(stLeft.nextToken());  
             
             if (url.length() == 0) {
                 dictLine = dictReader.readLine();
@@ -83,7 +84,7 @@ public class ComputeCrosswikisExistenceProbs {
             }
 
             String rawURL = st.nextToken();
-            String url = Utils.pruneURL(rawURL);
+            String url = WikiRedirects.pruneURL(rawURL);
 
             if (url.length() == 0) {
                 invdictLine = invdictReader.readLine();

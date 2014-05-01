@@ -19,6 +19,7 @@ import el.input_data_pipeline.TruthMention;
 import el.input_data_pipeline.wikilinks.WikilinksParser;
 import el.input_data_pipeline.wikilinks.WikilinksSinglePage;
 import el.utils.Utils;
+import el.wikipedia_redirects.WikiRedirects;
 
 // Class used to compute the probabilities p(e|n) and p(n|e) for entities that are 
 // not in the Crosswikis data. These will be approximated based on the corpus.
@@ -98,7 +99,7 @@ public class CompleteCrosswikisUsingOtherCorpus {
                 line = in.readLine();
                 continue;
             }
-            String url = Utils.pruneURL(st.nextToken());
+            String url = WikiRedirects.pruneURL(st.nextToken());
 
             if (!st.hasMoreTokens()) {
                 line = in.readLine();

@@ -26,10 +26,8 @@ IITBDocsDir: evalData/IITB/crawledDocs/
 theta: 0.0001
 # treshold for P(n|e)
 extendedTokenSpan: true
-# can be [simple] or [extended-token-span]
+# can be [baseline] or [extended-token-span]
 includeDummyEnt: true
-baseLine: false
-# use baseline method instead of our algorithm
 improvedIITB:false 
 # false = standard iitb ; true = improved iitb using a new annotations file
 ###############################################################################

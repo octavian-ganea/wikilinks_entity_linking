@@ -12,6 +12,7 @@ import java.util.TreeMap;
 import java.util.Vector;
 
 import el.utils.Utils;
+import el.wikipedia_redirects.WikiRedirects;
 
 // For printing Invdict in descending order by score
 class InvdictEntry implements Comparable {
@@ -75,7 +76,7 @@ public class LoadCrosswikisInvdict {
             }
 
             String rawURL = st.nextToken();
-            String url = Utils.pruneURL(rawURL);
+            String url = WikiRedirects.pruneURL(rawURL);
 
             if (url.length() == 0) {
                 line = in.readLine();

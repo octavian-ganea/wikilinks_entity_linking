@@ -21,6 +21,7 @@ import el.unittests.AllUnittests;
 import el.utils.Utils;
 import el.wikilinks_ents_or_names_with_freqs.ExtractWikilinksEntsWithDocFreqs;
 import el.wikilinks_ents_or_names_with_freqs.ExtractWikilinksNamesWithDocFreqs;
+import el.wikipedia_redirects.WikiRedirects;
 
 public class Main {    
 	///////////////////// MAIN ////////////////////////////////////////////
@@ -36,7 +37,7 @@ public class Main {
 	    // Compute p(\exist ent | name) in a different fashion using the Crosswikis data.
         // OUTPUT: STDOUT
         if (args[0].compareTo("[ComputeExistenceOfNameAsEntity]") == 0) {  
-            Utils.loadWikiRedirects(config.get("wikiRedirectsFile"));
+            WikiRedirects.loadWikiRedirects(config.get("wikiRedirectsFile"));
             ComputeCrosswikisExistenceProbs.compute(
                     config.get("allEntsFilename"), 
                     config.get("allNamesFilename"), 
@@ -150,7 +151,7 @@ public class Main {
         // For each such pairs, let n* = n1 U n2. Then compute also p(n*|n1,e) and p(n*|n2,e) based on Wikilinks
         // OUTPUT: stdout
         if (args[0].equals("[compute-context-probs]")) {
-            Utils.loadWikiRedirects(config.get("wikiRedirectsFile"));
+            WikiRedirects.loadWikiRedirects(config.get("wikiRedirectsFile"));
             
             String additionalIITBAnnotationsFile = null;
             IITBPagesIterator iitbIterator = 
@@ -163,7 +164,7 @@ public class Main {
         // IITB testing.
         // OUTPUT: stdout
         if (args[0].compareTo("[IITB-testing]") == 0) {
-            Utils.loadWikiRedirects(config.get("wikiRedirectsFile"));
+            WikiRedirects.loadWikiRedirects(config.get("wikiRedirectsFile"));
             
             boolean improvedIITB = Boolean.parseBoolean(config.get("improvedIITB"));
             String additionalIITBAnnotationsFile =  improvedIITB ? "evalData/IITB/iitb_foundbyme0_0001_final.xml" : null;
@@ -188,8 +189,7 @@ public class Main {
                     Double.parseDouble(config.get("theta")),
                     new IITBPagesIterator(config.get("groundTruthAnnotationsFilename"), additionalIITBAnnotationsFile, config.get("IITBDocsDir")),
                     Boolean.parseBoolean(config.get("extendedTokenSpan")),
-                    Boolean.parseBoolean(config.get("includeDummyEnt")),
-                    Boolean.parseBoolean(config.get("baseLine")));
+                    Boolean.parseBoolean(config.get("includeDummyEnt")));
             return;
         }		
 		

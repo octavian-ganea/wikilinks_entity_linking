@@ -1,6 +1,7 @@
 package el.input_data_pipeline;
 
 import el.utils.Utils;
+import el.wikipedia_redirects.WikiRedirects;
 
 public class TruthMention {
     public String wikiUrl = null;
@@ -21,11 +22,11 @@ public class TruthMention {
 			freebaseId = serializable.substring(serializable.indexOf("; /m/") + 2, serializable.indexOf(" --> "));
 		}
 		wikiUrl = serializable.substring(0,serializable.indexOf("; "));
-		wikiUrl = Utils.pruneURL(wikiUrl);
+		wikiUrl = WikiRedirects.pruneURL(wikiUrl);
 	}
 	
 	public TruthMention(String wikiUrl, String freebaseID, String anchorText, int mentionOffsetInText) {
-	    this.wikiUrl = Utils.pruneURL(wikiUrl);;
+	    this.wikiUrl = WikiRedirects.pruneURL(wikiUrl);;
 	    this.freebaseId = freebaseID;
 	    this.anchorText = anchorText;
 	    this.mentionOffsetInText = mentionOffsetInText;
