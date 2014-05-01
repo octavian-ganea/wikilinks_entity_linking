@@ -1,5 +1,6 @@
+# @c Ganea Octavian octavian.ganea@inf.ethz.ch
 # Config file for running a job. This contains the parameters given to the job
-# every line that starts with a # is a comment
+# Every line that starts with a # is a comment
 # No empty line inside one main configuration!
 # Params can be in any order inside one configuration.
 
