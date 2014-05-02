@@ -7,13 +7,13 @@ import java.io.IOException;
 import el.input_data_pipeline.GenericPagesIterator;
 import el.input_data_pipeline.TruthMention;
 
-public class WikilinksParser implements GenericPagesIterator {
+public class WikilinksShardParser implements GenericPagesIterator {
 	private BufferedReader in;
 	private String nextLine;
 	
 	private String filename;
 	
-	public WikilinksParser(String filename) throws IOException {
+	public WikilinksShardParser(String filename) throws IOException {
 	    this.filename = filename;
 		in = new BufferedReader(new FileReader(filename));
 		nextLine = in.readLine();
@@ -102,7 +102,7 @@ public class WikilinksParser implements GenericPagesIterator {
     @Override
     public GenericPagesIterator hardCopy() {
         try {
-            return new WikilinksParser(filename);
+            return new WikilinksShardParser(filename);
         } catch (IOException e) {
             e.printStackTrace();
         }

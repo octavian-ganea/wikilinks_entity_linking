@@ -40,7 +40,7 @@ class DictEntry implements Comparable {
 // Class for loading a (possibily prunned) Crosswiki dictionary p(e|n) from the dict file
 public class LoadCrosswikisDict {
 
-    public static HashMap<String, TreeMap<String, Double>> load(String filename, HashSet<String> allCandidateNames) throws IOException{
+    public static HashMap<String, TreeMap<String, Double>> loadAndMergeRedirectedURLs(String filename, HashSet<String> allCandidateNames) throws IOException{
         // <string><tab><cprob><space><url>[<space><score>]*
         
         System.err.println("[INFO] Loading and prunning dict P(e|n) ...");
@@ -158,6 +158,73 @@ public class LoadCrosswikisDict {
             }
             */
         }
+        in.close();     
+        System.err.println("[INFO] Done. Size = " + dict.size());       
+    
+        return dict;
+    }   
+  
+    // allEntitiesFromAllPages and entsDocFreqsInCorpus are considered iff they are not NULL
+    public static HashMap<String, TreeMap<String, Double>> load(
+            String filename, 
+            HashSet<String> allCandidateNames,
+            HashSet<String> allEntitiesFromAllPages, 
+            HashMap<String, Integer> entsDocFreqsInCorpus) throws IOException{
+        
+        // <string><tab><cprob><space><url>[<space><score>]*
+        
+        System.err.println("[INFO] Loading and prunning dict P(e|n) from file " + filename);
+
+        // dict: P(e|n)
+        // dict [name] = treemap<url, cprob>
+        HashMap<String, TreeMap<String, Double>> dict =  new HashMap<String, TreeMap<String, Double>>();
+        
+        BufferedReader in = new BufferedReader(new FileReader(filename));
+        String line = in.readLine();
+        int nr_line = 0;
+        
+        while (line != null && line.length() > 0) {
+            if (nr_line % 10000000 == 0) {
+                System.err.println("loaded " + nr_line);
+            }
+            nr_line ++;
+            StringTokenizer st = new StringTokenizer(line, "\t");
+
+            if (!st.hasMoreTokens()) {
+                line = in.readLine();
+                continue;
+            }
+            
+            String name = st.nextToken();
+            
+            // Consider just names that interest us.
+            if ((allCandidateNames != null && !allCandidateNames.contains(name)) || !st.hasMoreTokens()) {
+                line = in.readLine();
+                continue;
+            }
+
+            
+            String left = st.nextToken();
+            StringTokenizer stLeft = new StringTokenizer(left, " ");
+            
+            double cprob = Double.parseDouble(stLeft.nextToken());             
+            String url = WikiRedirects.pruneURL(stLeft.nextToken());           
+
+            // Consider just entities that interest us.
+            if ((allEntitiesFromAllPages != null && !allEntitiesFromAllPages.contains(url)) ||
+                    (entsDocFreqsInCorpus != null && !entsDocFreqsInCorpus.containsKey(url))) {
+                line = in.readLine();
+                continue;                
+            }
+            
+            if (!dict.containsKey(name)) {
+                dict.put(name, new TreeMap<String, Double>());
+            }
+            dict.get(name).put(url, cprob);
+            
+            line = in.readLine();
+        }
+
         in.close();     
         System.err.println("[INFO] Done. Size = " + dict.size());       
     

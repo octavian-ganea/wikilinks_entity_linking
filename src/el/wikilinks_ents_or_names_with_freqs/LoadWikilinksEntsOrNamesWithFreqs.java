@@ -8,7 +8,7 @@ import java.util.StringTokenizer;
 
 public class LoadWikilinksEntsOrNamesWithFreqs {
     public static HashMap<String, Integer> load(String filename, String namesOrEnts) throws IOException {
-        System.err.println("[INFO] Loading all " + namesOrEnts + "...");
+        System.err.println("[INFO] Loading all " + namesOrEnts + " from file " + filename);
 
         HashMap<String, Integer> map = new HashMap<String, Integer>();
         BufferedReader in = new BufferedReader(new FileReader(filename));

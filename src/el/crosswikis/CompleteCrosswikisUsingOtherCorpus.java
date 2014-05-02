@@ -16,7 +16,7 @@ import java.util.TreeMap;
 import java.util.Vector;
 
 import el.input_data_pipeline.TruthMention;
-import el.input_data_pipeline.wikilinks.WikilinksParser;
+import el.input_data_pipeline.wikilinks.WikilinksShardParser;
 import el.input_data_pipeline.wikilinks.WikilinksSinglePage;
 import el.utils.Utils;
 import el.wikipedia_redirects.WikiRedirects;
@@ -122,7 +122,7 @@ public class CompleteCrosswikisUsingOtherCorpus {
             int nr_file) throws IOException {
         
         System.err.println("Processing file " + filename + " ; number = " + nr_file);
-        WikilinksParser p = new WikilinksParser(filename);
+        WikilinksShardParser p = new WikilinksShardParser(filename);
 
         int doc_index = 0;
         while (p.hasNext()) {

@@ -12,7 +12,7 @@ import java.util.StringTokenizer;
 import java.util.Map.Entry;
 
 import el.input_data_pipeline.*;
-import el.input_data_pipeline.wikilinks.WikilinksParser;
+import el.input_data_pipeline.wikilinks.WikilinksShardParser;
 import el.input_data_pipeline.wikilinks.WikilinksSinglePage;
 
 // Extract a set with all entities from the Wikilinks corpus and their doc frequencies
@@ -20,7 +20,7 @@ public class ExtractWikilinksEntsWithDocFreqs {
     private static int fromFile(String filename, HashMap<String, Integer> freqMap) throws IOException {		
         System.err.println("Processing file " + filename);
 
-        WikilinksParser p = new WikilinksParser(filename);
+        WikilinksShardParser p = new WikilinksShardParser(filename);
 
         int doc_index = 0;
         while (p.hasNext()) {

@@ -1,7 +1,8 @@
 # @c Ganea Octavian octavian.ganea@inf.ethz.ch
 # Config file for running a job. This contains the parameters given to the job
 # Every line that starts with a # is a comment
-# No empty line inside one main configuration!
+# The first line of a configuration is its name; the rest of lines are param_name : param_value pairs. 
+# No empty line inside one main configuration (empty line means end of a configuration)!
 # Params can be in any order inside one configuration.
 
 
@@ -30,6 +31,16 @@ extendedTokenSpan: true
 includeDummyEnt: true
 improvedIITB:false 
 # false = standard iitb ; true = improved iitb using a new annotations file
+###############################################################################
+
+
+###############################################################################
+[tksp-classifier]
+wikiRedirectsFile:wikiRedirects/wikipedia_redirect.txt
+WikilinksDir: inputWikilinksData/annotated_sentences/
+invdictFilename: mergedCrosswikis/inv.dict.merged_full
+dictFilename: mergedCrosswikis/dict.merged
+allEntsFilename : entsWithDocFrequencies/ents.txt
 ###############################################################################
 
 

@@ -40,7 +40,7 @@ class InvdictEntry implements Comparable {
 //Class for loading a (possibily prunned) Crosswiki dictionary p(n|e) from the inv.dict file
 public class LoadCrosswikisInvdict {
 
-    public static HashMap<String, TreeMap<String, Double>> load(
+    public static HashMap<String, TreeMap<String, Double>> loadAndMergeRedirectsURLs(
             String filename,
             HashSet<String> allEntitiesFromAllPages, 
             HashMap<String, Integer> entsDocFreqsInCorpus) throws IOException{        
@@ -92,7 +92,9 @@ public class LoadCrosswikisInvdict {
 
             // TODO : delete this if you want to do a merging on inv.dict from the beginning
             // It doesn't make sense to have a candidate entity for which allEntsFreq is 0, because this will mean p(e \in E) = 0
-            if (!st.hasMoreTokens() || !allEntitiesFromAllPages.contains(url) || !entsDocFreqsInCorpus.containsKey(url)) {
+            if (!st.hasMoreTokens() || 
+                    (allEntitiesFromAllPages != null && !allEntitiesFromAllPages.contains(url))|| 
+                    (entsDocFreqsInCorpus != null && !entsDocFreqsInCorpus.containsKey(url))) {
                 line = in.readLine();
                 continue;
             }
@@ -223,6 +225,80 @@ public class LoadCrosswikisInvdict {
             }
         }
         /**/
+
+        System.err.println("[INFO] Done loading index. Size = " + invdict.size());
+
+        return invdict;
+    }       
+
+    
+    // allEntitiesFromAllPages and entsDocFreqsInCorpus are considered iff they are not NULL
+    public static HashMap<String, TreeMap<String, Double>> load(
+            String filename,
+            HashSet<String> allEntitiesFromAllPages, 
+            HashMap<String, Integer> entsDocFreqsInCorpus) throws IOException{        
+
+        // <url><tab><cprob><space><string>[<tab><score>[<space><score>]*]
+        System.err.println("[INFO] Loading and prunning the inv.dict P(n|e) from file " + filename);
+
+        // invdict: P(n|e)
+        // invdict[url] = treemap<name, cprob>
+        HashMap<String, TreeMap<String, Double>> invdict = 
+            new HashMap<String, TreeMap<String, Double>>();
+        
+        BufferedReader in = new BufferedReader(new FileReader(filename));
+        String line = in.readLine();
+        int nr_line = 0;
+
+        while (line != null && line.length() > 0) {
+            nr_line ++;
+            if (nr_line % 20000000 == 0) {
+                System.err.println("loaded " + nr_line);
+            }
+
+            StringTokenizer st = new StringTokenizer(line, "\t");
+
+            if (!st.hasMoreTokens()) {
+                line = in.readLine();
+                continue;
+            }
+
+            String rawURL = st.nextToken();
+            String url = WikiRedirects.pruneURL(rawURL);
+
+            if (url.length() == 0) {
+                line = in.readLine();
+                continue;
+            }
+
+            // It doesn't make sense to have a candidate entity for which allEntsFreq is 0, because this will mean p(e \in E) = 0
+            // Consider just entities that interest us.
+            if (!st.hasMoreTokens() || 
+                    (allEntitiesFromAllPages != null && !allEntitiesFromAllPages.contains(url))|| 
+                    (entsDocFreqsInCorpus != null && !entsDocFreqsInCorpus.containsKey(url))) {
+                line = in.readLine();
+                continue;
+            }
+
+            String left = st.nextToken();
+            double cprob = Double.parseDouble(left.substring(0,left.indexOf(" ")));  
+
+
+            if (cprob < 0.00005) {
+                line = in.readLine();
+                continue;             
+            }
+
+            String mention = left.substring(left.indexOf(" ") + 1);         
+
+            if (!invdict.containsKey(url)) {
+                invdict.put(url, new TreeMap<String, Double>());
+            }
+            invdict.get(url).put(mention, cprob);
+
+            line = in.readLine();
+        }
+        in.close();     
 
         System.err.println("[INFO] Done loading index. Size = " + invdict.size());
 

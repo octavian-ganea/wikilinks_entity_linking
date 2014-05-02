@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 import el.input_data_pipeline.*;
-import el.input_data_pipeline.wikilinks.WikilinksParser;
+import el.input_data_pipeline.wikilinks.WikilinksShardParser;
 import el.input_data_pipeline.wikilinks.WikilinksSinglePage;
 import el.utils.Utils;
 
@@ -48,7 +48,7 @@ public class ComputeKeyphrasenessDummyProbs {
 			    continue;
 			}
 			System.err.println("Processing file " + corpusDirectory + filename);
-			WikilinksParser p = new WikilinksParser(corpusDirectory + filename);
+			WikilinksShardParser p = new WikilinksShardParser(corpusDirectory + filename);
 			int nr_page = -1;
 			while (p.hasNext()) {
 				nr_page++;
