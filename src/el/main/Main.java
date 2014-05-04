@@ -2,14 +2,21 @@ package el.main;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.StringReader;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
 import java.util.Vector;
 
+import edu.stanford.nlp.ling.CoreLabel;
+import edu.stanford.nlp.pipeline.StanfordCoreNLP;
+import edu.stanford.nlp.process.CoreLabelTokenFactory;
+import edu.stanford.nlp.process.PTBTokenizer;
+import edu.stanford.nlp.tagger.maxent.MaxentTagger;
 import el.GenCandidateEntityNamePairs;
 import el.context_probs.ComputeContextProbsFromWikilinks;
 import el.correct_tksp_classifier.ComputeTkspFeatures;
@@ -31,7 +38,15 @@ public class Main {
     
     ///////////////////// MAIN ////////////////////////////////////////////
     public static void main(String[] args) throws Exception {
-
+        String s = "I love to feede.";
+        
+        Properties props = new Properties();
+        props.setProperty("outputFormat", "tsv");
+        MaxentTagger tagger = new MaxentTagger("lib/stanford-postagger-2014-01-04/models/english-bidirectional-distsim.tagger",
+                props);
+        System.out.println(tagger.tagString(s));
+        
+        
         AllUnittests.run();	    
         HashMap<String,String> config = LoadConfigFile.load(args[0]);
 

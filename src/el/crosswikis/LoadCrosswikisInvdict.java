@@ -290,11 +290,16 @@ public class LoadCrosswikisInvdict {
             }
 
             String mention = left.substring(left.indexOf(" ") + 1);         
-
+            
             if (!invdict.containsKey(url)) {
                 invdict.put(url, new TreeMap<String, Double>());
             }
-            invdict.get(url).put(mention, cprob);
+            
+            mention = mention.toLowerCase();
+            if (!invdict.get(url).containsKey(mention)) {
+                invdict.get(url).put(mention, cprob);
+            }
+//            invdict.get(url).put(mention, cprob);
 
             line = in.readLine();
         }

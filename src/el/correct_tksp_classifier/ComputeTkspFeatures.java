@@ -26,10 +26,9 @@ public class ComputeTkspFeatures {
             String dictFilename, 
             String allEntsFilename) throws IOException, InterruptedException {
         
-//        HashMap<String, Integer> entsDocFreqsInCorpus = LoadWikilinksEntsOrNamesWithFreqs.load(allEntsFilename, "entities");
-        
-//        HashMap<String, TreeMap<String, Double>> invdict = LoadCrosswikisInvdict.load(invdictFilename, null, entsDocFreqsInCorpus);
-//        HashMap<String, TreeMap<String, Double>> dict = LoadCrosswikisDict.load(dictFilename, null, null, entsDocFreqsInCorpus);
+        HashMap<String, Integer> entsDocFreqsInCorpus = LoadWikilinksEntsOrNamesWithFreqs.load(allEntsFilename, "entities");
+        HashMap<String, TreeMap<String, Double>> invdict = LoadCrosswikisInvdict.load(invdictFilename, null, entsDocFreqsInCorpus);
+        HashMap<String, TreeMap<String, Double>> dict = LoadCrosswikisDict.load(dictFilename, null, null, entsDocFreqsInCorpus);
         
         
         System.err.println("[INFO] Processing Wikilinks to extract and compute training data features:");
@@ -39,7 +38,16 @@ public class ComputeTkspFeatures {
             GenericSinglePage doc = inputPagesIterator.next();
 
             for (TruthMention m : doc.truthMentions) {
-
+                String name = m.anchorText;
+                String ent = m.wikiUrl;
+                int offset = m.mentionOffsetInText;
+                String context = doc.getRawText().substring(offset - 30, offset + name.length() + 30);
+                
+                System.out.println("name : " + name);
+                System.out.println("ent : " + ent);
+                
+                
+                System.out.println();
             }
         }
         System.err.println("[INFO] Done processing Wikilinks.");

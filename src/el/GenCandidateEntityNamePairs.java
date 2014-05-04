@@ -644,7 +644,7 @@ public class GenCandidateEntityNamePairs {
      *
      *  Returns a set of winning candidates.   
      */
-    private static Vector<Candidate> GenWinningEntitiesWithExtendedTokenSpan(
+    private static Vector<Candidate> GenWinningTripletsWithExtendedTokenSpan(
             GenericSinglePage doc,
             Vector<Candidate> candidates,
             HashSet<String> serializedMentions,
@@ -840,7 +840,7 @@ public class GenCandidateEntityNamePairs {
             
             if (extendedTokenSpan) {
                 Vector<Candidate> matchings = 
-                    GenWinningEntitiesWithExtendedTokenSpan(
+                    GenWinningTripletsWithExtendedTokenSpan(
                         doc,
                         allCandidates.get(nr_page), 
                         serializedMentions, 
@@ -849,7 +849,7 @@ public class GenCandidateEntityNamePairs {
                         debugMentionsInfos);
 
                 // Annotate the input doc.rawText using the new found entities:
-                // ExtractSentencesWithTheNewAnnotations.run(doc, matchings);
+                // AnnotateDocWithNewAnnotations.run(doc, matchings);
             } else {
                 Vector<Candidate>  matchings = 
                     GenWinningEntitiesWithBaselineApproach(

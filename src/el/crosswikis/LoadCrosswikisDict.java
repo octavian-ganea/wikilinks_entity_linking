@@ -197,6 +197,11 @@ public class LoadCrosswikisDict {
             
             String name = st.nextToken();
             
+            if (!name.toLowerCase().equals(name)) {
+                line = in.readLine();
+                continue;                
+            }
+            
             // Consider just names that interest us.
             if ((allCandidateNames != null && !allCandidateNames.contains(name)) || !st.hasMoreTokens()) {
                 line = in.readLine();
