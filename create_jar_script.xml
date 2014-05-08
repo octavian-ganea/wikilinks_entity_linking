@@ -9,7 +9,7 @@
                 <attribute name="Class-Path" value="."/>
             </manifest>
             <fileset dir="/home/octi/Desktop/nlp/WikilinksEntityLinker/bin"/>
-            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/Thrift/wikilinks_thrift/lib/stanford-corenlp-3.3.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/octi/Desktop/nlp/WikilinksEntityLinker/lib/stanford-corenlp-3.3.1.jar"/>
         </jar>
     </target>
 </project>

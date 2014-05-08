@@ -1,56 +1,29 @@
 package el.main;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.StringReader;
-import java.math.BigDecimal;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Properties;
-import java.util.StringTokenizer;
-import java.util.TreeSet;
-import java.util.Vector;
 
-import edu.stanford.nlp.ling.CoreLabel;
-import edu.stanford.nlp.pipeline.StanfordCoreNLP;
-import edu.stanford.nlp.process.CoreLabelTokenFactory;
-import edu.stanford.nlp.process.PTBTokenizer;
-import edu.stanford.nlp.tagger.maxent.MaxentTagger;
 import el.GenCandidateEntityNamePairs;
 import el.context_probs.ComputeContextProbsFromWikilinks;
 import el.correct_tksp_classifier.ComputeTkspFeatures;
-import el.crosswikis.CompleteCrosswikisUsingOtherCorpus;
-import el.crosswikis.ExtractAllNamesFromCrosswikiDict;
 import el.crosswikis.SortInvdictByName;
 import el.entity_existence_probs.ComputeCrosswikisExistenceProbs;
-import el.entity_existence_probs.ComputeKeyphrasenessDummyProbs;
-import el.input_data_pipeline.*;
 import el.input_data_pipeline.iitb.IITBPagesIterator;
-import el.input_data_pipeline.wikilinks.WikilinksShardParser;
 import el.unittests.AllUnittests;
-import el.utils.Utils;
-import el.wikilinks_ents_or_names_with_freqs.ExtractWikilinksEntsWithDocFreqs;
-import el.wikilinks_ents_or_names_with_freqs.ExtractWikilinksNamesWithDocFreqs;
 import el.wikipedia_redirects.WikiRedirects;
 
 public class Main {
     
     ///////////////////// MAIN ////////////////////////////////////////////
     public static void main(String[] args) throws Exception {
-        String s = "I love to feede.";
-        
-        Properties props = new Properties();
-        props.setProperty("outputFormat", "tsv");
-        MaxentTagger tagger = new MaxentTagger("lib/stanford-postagger-2014-01-04/models/english-bidirectional-distsim.tagger",
-                props);
-        System.out.println(tagger.tagString(s));
-        
-        
         AllUnittests.run();	    
+        
+        if (args.length == 0) {
+            System.err.println("[ERROR] Invalid command line parameters!");
+            return;
+        }
         HashMap<String,String> config = LoadConfigFile.load(args[0]);
 
-        ///////////// all code starts from here //////////////////////////
+        ///////////// All code starts from here //////////////////////////
 
         //Utils.WriteIITBGroundTruthFileInXMLFormat();
 
@@ -68,14 +41,35 @@ public class Main {
         }
 
         // Classifier for selecting the correct tksp when entity is given.
+        // Training data: Wikilinks
+        // Test data: IITB
         // OUTPUT: STDOUT
         if (args[0].compareTo("[tksp-classifier]") == 0) {  
             WikiRedirects.loadWikiRedirects(config.get("wikiRedirectsFile"));
-            ComputeTkspFeatures.compute(
-                    config.get("WikilinksDir"),
+            
+            ComputeTkspFeatures compTkspFeatures = new ComputeTkspFeatures(
                     config.get("invdictFilename"), 
                     config.get("dictFilename"),
                     config.get("allEntsFilename"));
+
+            // Test example:
+            System.err.println("[INFO] Test example:");
+            System.err.println(compTkspFeatures.computeFeaturesVectorForOneName("dog", "Dog", "My dog is good.", "dog is good."));
+            
+            // Training data:
+            System.err.println("[INFO] Computing training data ...");
+            compTkspFeatures.computeForWikilinks(config.get("WikilinksDir"), config.get("trainingOutputFileRoot"));
+
+            // Test data:
+            System.err.println("[INFO] Computing test data ...");
+            boolean improvedIITB = Boolean.parseBoolean(config.get("improvedIITB"));
+            String additionalIITBAnnotationsFile = improvedIITB ? "evalData/IITB/iitb_foundbyme0_0001_final.xml" : null;
+            compTkspFeatures.computeForIITB(
+                    config.get("groundTruthAnnotationsFilename"), 
+                    additionalIITBAnnotationsFile, 
+                    config.get("IITBDocsDir"), 
+                    config.get("testOutputFileRoot"));
+
             return;
         }
         
@@ -92,10 +86,10 @@ public class Main {
         //        args[1] = file with Crosswikis inv.dict
 	    //        args[2] = file with all entities from Wikilinks generated with [ExtractEntsWithFreq]
         // OUTPUT: args[3] = files with (name, doc freq)
-        // args[4] = [ComputeCrosswikisProbs]
-        if (args.length == 5 && args[4].compareTo("[ComputeCrosswikisProbs]") == 0) {            
+        // args[4] = [CompleteCrosswikisUsingOtherCorpus]
+        if (args.length == 5 && args[4].compareTo("[CompleteCrosswikisUsingOtherCorpus]") == 0) {            
             Utils.loadWikiRedirects(config.get("wikiRedirectsFile"));
-            ComputeCrosswikisProbs.fromDir(args[0], args[1], args[2], args[3]);
+            CompleteCrosswikisUsingOtherCorpus.fromDir(args[0], args[1], args[2], args[3]);
             return;
         }
 
@@ -146,38 +140,6 @@ public class Main {
 			DummyEntityProbabilities.compute(args[0], args[1]);
 			return;
 		}		
-
-
-		// Main functionality of the code that implements the name-entity matching algorithms from the papers.
-		// Input: args[0] = complete inv.dict file P(n|e)
-		//        args[1] = complete dict file P(e|n) 
-		//        args[2] = all entities file generated with [ExtractEntsWithFreq] from (Wikilinks corpus) args[5]
-		//        args[3] = file containing dummy probabilities p(M.ent != dummy | P.name = n) from [dummyProbs]
-		//        args[4] = theta
-		//        args[5] = input WikiLinkItems shard file of the Wikilinks corpus
-		//        args[6] = [simple] or [extended-token-span]
-		//        args[7] = [dummy] or [no-dummy]
-		//        args[8] = [run_main]
-		// OUTPUT: stdout
-		if (args.length == 9 && args[8].compareTo("[run_main]") == 0) {
-		    if (args[7].compareTo("[dummy]") != 0 && args[7].compareTo("[no-dummy]") != 0) {
-		        System.err.println("Invalid param " + args[7]);
-		        System.exit(1);
-		    }
-	        if (args[6].compareTo("[simple]") != 0 && args[6].compareTo("[extended-token-span]") != 0) {
-	            System.err.println("Invalid param " + args[6]);
-	            System.exit(1);
-	        }
-
-            Utils.loadWikiRedirects(config.get("wikiRedirectsFile"));
-	        GenericPagesIterator inputPagesIterator = new WikilinksParser(args[5]);
-
-			GenCandidateEntityNamePairs.run(
-					args[0], args[1], args[2], args[3], "contextsProbsIITB/probs.txt", "weightedByDictScore", 1.0,
-					Double.parseDouble(args[4]), inputPagesIterator,
-					args[6].contains("[extended-token-span]"), !args[7].contains("[no-dummy]"), false);
-			return;
-		}
          */
 
         // Compute all pairs (n1,e), (n2,e) of overlapping token spans.
@@ -194,6 +156,7 @@ public class Main {
             return;
         }
 
+        // Main functionality of the code that implements the name-entity matching algorithms from the papers.
         // IITB testing.
         // OUTPUT: stdout
         if (args[0].compareTo("[IITB-testing]") == 0) {

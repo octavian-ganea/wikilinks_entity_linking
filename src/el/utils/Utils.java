@@ -4,17 +4,112 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
+import edu.stanford.nlp.ling.CoreLabel;
+import edu.stanford.nlp.process.CoreLabelTokenFactory;
+import edu.stanford.nlp.process.PTBTokenizer;
+import edu.stanford.nlp.tagger.maxent.MaxentTagger;
+import edu.stanford.nlp.tagger.maxent.TTags;
 import el.TokenSpan;
 
 public class Utils {
+	static public MaxentTagger tagger = null;
 	
+    // Returns a set of PoS tags for a given input text.    
+    // v[2*i] = i-th word; v[2*i+1] = i-th tag 
+    public static Vector<String> getPosTags(String s) {
+        if (tagger == null) {
+            Properties props = new Properties();
+            props.setProperty("outputFormat", "tsv");
+            tagger = new MaxentTagger("lib/stanford-postagger-2014-01-04/models/english-bidirectional-distsim.tagger",
+                    props);
+        }
+        Vector<String> v = new Vector<String>();
+        StringTokenizer tags = new StringTokenizer(tagger.tagString(s), "\n");
+        
+        HashMap<String,String> rez = new HashMap<String,String>();
+        while (tags.hasMoreTokens()) {
+            StringTokenizer st = new StringTokenizer(tags.nextToken(), "\t");
+            v.add(st.nextToken());
+            v.add(st.nextToken());
+        }
+        
+        return v;
+    }
+    
+    // Maybe someone using the PoS tagger will want to use tagger.tokenizeText(r) instead of this 
+    static public Vector<String> getTokens(String s) {
+        Vector<String> v = new Vector<String>();
+        PTBTokenizer ptbt = new PTBTokenizer(
+                new StringReader(s), new CoreLabelTokenFactory(), "ptb3Escaping=false");
+        List<CoreLabel> tokens = ptbt.tokenize();
+        for (CoreLabel cl : tokens) {
+            v.add(cl.word());
+        }
+        return v;
+    }
+    
+    static public int numTokensUsingStanfordNLP(String s) {
+        return getTokens(s).size();
+    }
+    
+    
+    // smallStringToEnd is needed because there might be multiple names within the same sentence
+    static public Vector<String> getPreviousAndNextTokensAndPosTags(String context, String smallString, String smallStringToEnd) {
+        // Add a dot at the beginning of the context to avoid having empty results.
+        Vector<String> contextTags = getPosTags("." + context + ".");
+        Vector<String> smallStringTags = getPosTags(smallString);
+        Vector<String> smallStringToEndTags = getPosTags(smallStringToEnd + ".");
+        
+       
+        int index = contextTags.size() - smallStringToEndTags.size();
+        if (index <= 0) {
+            System.err.println("[FATAL] getPreviousAndNextTokensUsingStanfordNLP fatal error. context = " + context + " ; small string = " + smallString +
+                    " ; small string to the end = " + smallStringToEnd  + " " + index);
+            System.exit(1);
+        }
+
+        for (int j = 0; j < smallStringTags.size(); j += 2) {
+            if (!smallStringTags.get(j).equals(contextTags.get(index + j))) {
+                index = -1;
+                break;
+            }
+        }
+        if (index <= 0) {
+            System.err.println("[FATAL] getPreviousAndNextTokensUsingStanfordNLP fatal error. context = " + context + " ; small string = " + smallString +
+                    " ; small string to the end = " + smallStringToEnd  + " " + index);
+            System.exit(1);
+        }
+        for (int j = 0; j < smallStringToEndTags.size(); j += 2) {
+            if (!smallStringToEndTags.get(j).equals(contextTags.get(index + j))) {
+                index = -1;
+                break;
+            }
+        }
+        if (index <= 0) {
+            System.err.println("[FATAL] getPreviousAndNextTokensUsingStanfordNLP fatal error. context = " + context + " ; small string = " + smallString +
+                    " ; small string to the end = " + smallStringToEnd  + " " + index);
+            System.exit(1);
+        }
+        
+        Vector<String> rez = new Vector<String>();
+        rez.add(contextTags.get(index - 2));
+        rez.add(contextTags.get(index - 1));
+        rez.add(contextTags.get(index + smallStringTags.size()));
+        rez.add(contextTags.get(index + smallStringTags.size() + 1));
+        return rez;
+    }
+    
+    
 	// Comparator used for mentions_hashtable.
 	static class StringComp implements Comparator<String> {
 		@Override
@@ -37,36 +132,27 @@ public class Utils {
 		return false;
 	}
 	
-	static public int NumTokens(String s) {
+	static public int numDictionaryWords(String s) {
 	    int i = 0;
 	    while (i < s.length() && isWordSeparator(s.charAt(i))) {
 	        i++;
 	    }
-
 	    if (i == s.length()) return 0;
 	    
-        while (i < s.length() && !isWordSeparator(s.charAt(i))) {
-            i++;
+	    int nrToks = 0;
+        while (i < s.length()) {
+            nrToks++;
+            while (i < s.length() && !isWordSeparator(s.charAt(i))) {
+                i++;
+            }
+
+            while (i < s.length() && isWordSeparator(s.charAt(i))) {
+                i++;
+            }
         }
-
-        while (i < s.length() && isWordSeparator(s.charAt(i))) {
-            i++;
-        }
-
-        if (i == s.length()) return 1;
-
-
-        while (i < s.length() && !isWordSeparator(s.charAt(i))) {
-            i++;
-        }
-
-        while (i < s.length() && isWordSeparator(s.charAt(i))) {
-            i++;
-        }
-        if (i == s.length()) return 2;
-
-        return 3;
+        return nrToks;
 	}
+	
 	
 	// Returns all sub-token spans of t=n-,n,n+ that contain n.
 	// n is the token starting at offset from text.
@@ -141,8 +227,8 @@ public class Utils {
             int start =  n2.indexOf(n1), end = start + n1.length();
             if ( (start == 0 || Utils.isWordSeparator(n2.charAt(start-1)) ) && 
                     (end == n2.length() || Utils.isWordSeparator(n2.charAt(end)) ) &&
-                    Utils.NumTokens(n2.substring(0,start)) <= numNeighTokens &&
-                    Utils.NumTokens(n2.substring(end)) <= numNeighTokens) {
+                    Utils.numDictionaryWords(n2.substring(0,start)) <= numNeighTokens &&
+                    Utils.numDictionaryWords(n2.substring(end)) <= numNeighTokens) {
                 return n2;
             }
         }
@@ -152,8 +238,8 @@ public class Utils {
                     || n1.length() - i == n2.length())
                     && n2.startsWith(n1.substring(i))
                     && (i == 0 || Utils.isWordSeparator(n1.charAt(i-1)) ) ) {
-                if (Utils.NumTokens(n1.substring(0,i)) <= numNeighTokens &&
-                        Utils.NumTokens(n2.substring(n1.length() - i)) <= numNeighTokens) {
+                if (Utils.numDictionaryWords(n1.substring(0,i)) <= numNeighTokens &&
+                        Utils.numDictionaryWords(n2.substring(n1.length() - i)) <= numNeighTokens) {
                     return n1.substring(0, i) + n2;
                 }
             }

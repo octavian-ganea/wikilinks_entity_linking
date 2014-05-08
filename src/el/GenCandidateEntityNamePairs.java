@@ -366,7 +366,7 @@ public class GenCandidateEntityNamePairs {
         double winnerScore = 0.0; 
         
         // Different initialization for p(dummy|n): it is 1.0 if the name contains at most 2 tokens, 0.0 in the rest.            
-        double dummyInit = (Utils.NumTokens(name) <= 2 ? 0.99999 : 0.00001);
+        double dummyInit = (Utils.numDictionaryWords(name) <= 2 ? 0.99999 : 0.00001);
         
         // for each such e' compute l(n'\in t, e') and retain the highest scored e'
         for (String entity : possibleEntities) {

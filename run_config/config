@@ -34,13 +34,21 @@ improvedIITB:false
 ###############################################################################
 
 
+            
 ###############################################################################
 [tksp-classifier]
 wikiRedirectsFile:wikiRedirects/wikipedia_redirect.txt
-WikilinksDir: inputWikilinksData/annotated_sentences/
 invdictFilename: mergedCrosswikis/inv.dict.merged_full
 dictFilename: mergedCrosswikis/dict.merged
 allEntsFilename : entsWithDocFrequencies/ents.txt
+#
+WikilinksDir: inputWikilinksData/annotated_sentences/
+trainingOutputFileRoot: training_names_tksp_classifier
+#
+improvedIITB: false
+groundTruthAnnotationsFilename: evalData/IITB/CSAW_Annotations.xml
+IITBDocsDir: evalData/IITB/crawledDocs/
+testOutputFileRoot: test_names_tksp_classifier
 ###############################################################################
 
 
