@@ -62,7 +62,6 @@ public class LoadCrosswikisDict {
         while (line != null && line.length() > 0) {
             if (nr_line % 10000000 == 0) {
                 System.err.println("loaded " + nr_line);
-                //break;//////////////////////
             }
             nr_line ++;
             StringTokenizer st = new StringTokenizer(line, "\t");

@@ -5,17 +5,18 @@ import java.util.HashMap;
 import el.GenCandidateEntityNamePairs;
 import el.context_probs.ComputeContextProbsFromWikilinks;
 import el.correct_tksp_classifier.ComputeTkspFeatures;
+import el.correct_tksp_classifier.EvalLibLinearModel;
+import el.correct_tksp_classifier.ScoreType;
 import el.crosswikis.SortInvdictByName;
 import el.entity_existence_probs.ComputeCrosswikisExistenceProbs;
 import el.input_data_pipeline.iitb.IITBPagesIterator;
 import el.unittests.AllUnittests;
 import el.wikipedia_redirects.WikiRedirects;
-
+ 
 public class Main {
-    
     ///////////////////// MAIN ////////////////////////////////////////////
     public static void main(String[] args) throws Exception {
-        AllUnittests.run();	    
+        AllUnittests.run();     
         
         if (args.length == 0) {
             System.err.println("[ERROR] Invalid command line parameters!");
@@ -52,14 +53,6 @@ public class Main {
                     config.get("dictFilename"),
                     config.get("allEntsFilename"));
 
-            // Test example:
-            System.err.println("[INFO] Test example:");
-            System.err.println(compTkspFeatures.computeFeaturesVectorForOneName("dog", "Dog", "My dog is good.", "dog is good."));
-            
-            // Training data:
-            System.err.println("[INFO] Computing training data ...");
-            compTkspFeatures.computeForWikilinks(config.get("WikilinksDir"), config.get("trainingOutputFileRoot"));
-
             // Test data:
             System.err.println("[INFO] Computing test data ...");
             boolean improvedIITB = Boolean.parseBoolean(config.get("improvedIITB"));
@@ -70,6 +63,27 @@ public class Main {
                     config.get("IITBDocsDir"), 
                     config.get("testOutputFileRoot"));
 
+            // Training data:
+            System.err.println("[INFO] Computing training data ...");
+            compTkspFeatures.computeForWikilinks(config.get("WikilinksDir"), config.get("trainingOutputFileRoot"));
+
+            return;
+        }
+        
+        if (args[0].compareTo("[tksp-classifier-eval]") == 0) {  
+            EvalLibLinearModel evalObj = new EvalLibLinearModel(config.get("trainingModelFilename"));
+            
+            System.err.println();
+            System.err.println("Eval for file : " + config.get("testFilename"));
+            evalObj.evalEachTestCase(config.get("testFilename"), config.get("testVerboseFilename"), ScoreType.LIBLINEAR_SCORE, false);
+            evalObj.evalEachTestCase(config.get("testFilename"), config.get("testVerboseFilename"), ScoreType.CROSSWIKIS_SCORE_ONLY, false);
+            evalObj.evalEachTestCase(config.get("testFilename"), config.get("testVerboseFilename"), ScoreType.LONGEST_TKSP_SCORE, false);
+           
+            System.err.println();
+            System.err.println("Eval for file : " + config.get("trainingFilename"));
+            evalObj.evalEachTestCase(config.get("trainingFilename"), "", ScoreType.LIBLINEAR_SCORE, false);
+            evalObj.evalEachTestCase(config.get("trainingFilename"), "", ScoreType.CROSSWIKIS_SCORE_ONLY, false);
+            evalObj.evalEachTestCase(config.get("trainingFilename"), "", ScoreType.LONGEST_TKSP_SCORE, false);
             return;
         }
         
@@ -84,7 +98,7 @@ public class Main {
         /*
         // INPUT: args[0] = directory that contains all Wikilinks *.data files OR single input *.data file 
         //        args[1] = file with Crosswikis inv.dict
-	    //        args[2] = file with all entities from Wikilinks generated with [ExtractEntsWithFreq]
+        //        args[2] = file with all entities from Wikilinks generated with [ExtractEntsWithFreq]
         // OUTPUT: args[3] = files with (name, doc freq)
         // args[4] = [CompleteCrosswikisUsingOtherCorpus]
         if (args.length == 5 && args[4].compareTo("[CompleteCrosswikisUsingOtherCorpus]") == 0) {            
@@ -96,12 +110,12 @@ public class Main {
 
         // Extract a set with all 1-ngrams and 2-ngrams from the Wikilinks corpus (*.data file)
         // together with their doc frequencies. Just names appearing in Crosswikis dict are considered.
-	    // This was used to compute p(name) and to evaluate
-	    // p(exist ent | n) = p(n|e)/p(e|n,exist e)  * p(e)/p(n)
+        // This was used to compute p(name) and to evaluate
+        // p(exist ent | n) = p(n|e)/p(e|n,exist e)  * p(e)/p(n)
         // INPUT: args[0] = directory that contains all Wikilinks *.data files OR single input *.data file 
-	    //        args[1] = file with Crosswikis dict
+        //        args[1] = file with Crosswikis dict
         // OUTPUT: args[2] = files with (name, doc freq)
-	    //         args[3] = num shards for output files (RAM restrictions impose this)
+        //         args[3] = num shards for output files (RAM restrictions impose this)
         // args[2] = [ExtractNamesWithDocFreq]
         if (args.length == 5 && args[4].compareTo("[ExtractNamesWithDocFreq]") == 0) {            
             Utils.loadWikiRedirects(config.get("wikiRedirectsFile"));
@@ -109,37 +123,37 @@ public class Main {
             return;
         }
 
-		// Extract a set with all entities from the Wikilinks corpus (*.data file)
-		// together with their doc frequencies
-		// INPUT: args[0] = directory that contains all Wikilinks *.data files OR single input *.data file	
-		// OUTPUT: args[1] = file with (url, doc freq) 
-		// args[2] = [ExtractEntsWithFreq]
-		if (args.length == 3 && args[2].compareTo("[ExtractEntsWithFreq]") == 0) {
+        // Extract a set with all entities from the Wikilinks corpus (*.data file)
+        // together with their doc frequencies
+        // INPUT: args[0] = directory that contains all Wikilinks *.data files OR single input *.data file  
+        // OUTPUT: args[1] = file with (url, doc freq) 
+        // args[2] = [ExtractEntsWithFreq]
+        if (args.length == 3 && args[2].compareTo("[ExtractEntsWithFreq]") == 0) {
             Utils.loadWikiRedirects(config.get("wikiRedirectsFile"));
-			ExtractWikilinksEntsWithFreq.fromDir(args[0], args[1]);
-		    return;
-		}
+            ExtractWikilinksEntsWithFreq.fromDir(args[0], args[1]);
+            return;
+        }
 
-		// Extracts all the distinct one-token names from p(e|n) dictionary.
-		// Input: args[0] = dictionary file
-		//        args[1] = [ExtractAllNamesFromCrosswikiDict]
-		if (args.length == 2 && args[1].compareTo("[ExtractAllNamesFromCrosswikiDict]") == 0) {
+        // Extracts all the distinct one-token names from p(e|n) dictionary.
+        // Input: args[0] = dictionary file
+        //        args[1] = [ExtractAllNamesFromCrosswikiDict]
+        if (args.length == 2 && args[1].compareTo("[ExtractAllNamesFromCrosswikiDict]") == 0) {
             Utils.loadWikiRedirects(config.get("wikiRedirectsFile"));
-			ExtractAllNamesFromCrosswikiDict.run(args[0]);
-			return;
-		}
+            ExtractAllNamesFromCrosswikiDict.run(args[0]);
+            return;
+        }
 
-		// Computes keyphraseness(n) = p(dummy | n) probabilities for all names n by looking at all files 
-		// from the Wikilinks corpus and counting the number of docs where n the anchor text of an Wikipedia link
-		// over the number of docs in which n appears
-		// Input: args[0] = file with all known names extracted using [ExtractAllNamesFromCrosswikiDict]
-		//        args[1] = directory with corpus data
-		//        args[2] = [dummyProbs]
-		if (args.length == 3 && args[2].compareTo("[dummyProbs]") == 0) {
+        // Computes keyphraseness(n) = p(dummy | n) probabilities for all names n by looking at all files 
+        // from the Wikilinks corpus and counting the number of docs where n the anchor text of an Wikipedia link
+        // over the number of docs in which n appears
+        // Input: args[0] = file with all known names extracted using [ExtractAllNamesFromCrosswikiDict]
+        //        args[1] = directory with corpus data
+        //        args[2] = [dummyProbs]
+        if (args.length == 3 && args[2].compareTo("[dummyProbs]") == 0) {
             Utils.loadWikiRedirects(config.get("wikiRedirectsFile"));
-			DummyEntityProbabilities.compute(args[0], args[1]);
-			return;
-		}		
+            DummyEntityProbabilities.compute(args[0], args[1]);
+            return;
+        }       
          */
 
         // Compute all pairs (n1,e), (n2,e) of overlapping token spans.
@@ -187,8 +201,9 @@ public class Main {
                     Boolean.parseBoolean(config.get("extendedTokenSpan")),
                     Boolean.parseBoolean(config.get("includeDummyEnt")));
             return;
-        }		
+        }       
 
         System.err.println("[ERROR] Invalid command line parameters!");
     }
+    
 }

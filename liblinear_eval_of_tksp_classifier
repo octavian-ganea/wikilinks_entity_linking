@@ -1,0 +1,79 @@
+TODO:
+- eval method for liblinear
+- last heuristic: choose always the one with highest p(n|e) 
+- libSVM ?
+
+
+**************** LIBLINEAR ******************
+- super fast on my data
+
+
+./train -B 1 training_names_tksp_classifier.features_short_data
+./predict test_names_tksp_classifier.features_data training_names_tksp_classifier.features_short_data.model bla
+Accuracy = 86.3873% (6968/8066)
+
+./train -v 5 -B 1 training_names_tksp_classifier.features_short_data
+Cross Validation Accuracy = 93.2413% (overfitting !!!!)
+Accuracy = 86.3873% (6968/8066)
+
+./train -v 5 -B 1 -w1 2 -w0 1 training_names_tksp_classifier.features_short_data
+Accuracy = 86.3873% (6968/8066)
+
+./train -B 1 -w1 2 -w0 1 -c 10 training_names_tksp_classifier.features_short_data
+Accuracy = 87.3419% (7045/8066)
+
+
+./train -B 1 -w1 2 -w0 1 -c 50 training_names_tksp_classifier.features_short_data
+Accuracy = 87.0568% (7022/8066)
+
+
+./train -B 1 -w1 2 -w0 1 -c 5 training_names_tksp_classifier.features_short_data
+Accuracy = 87.5279% (7060/8066)
+
+
+./train -B 1 -w1 1.5 -w0 1 -c 4 training_names_tksp_classifier.features_short_data
+Accuracy = 87.1436% (7029/8066)
+
+./train -B 1 -w1 2 -w0 1 -c 4 -s 2 training_names_tksp_classifier.features_short_data
+Accuracy = 87.6643% (7071/8066)
+
+
+./train -B 1 -w1 2 -w0 1 -c 1 -s 3 training_names_tksp_classifier.features_short_data
+Accuracy = 87.6767% (7072/8066)
+
+BEST OF ALL types of solvers !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+./train -B 1 -w1 2 -w0 1 -c 5 -s 4 training_names_tksp_classifier.features_short_data
+Accuracy = 87.7387% (7077/8066)   
+./predict training_names_tksp_classifier.features_short_data training_names_tksp_classifier.features_short_data.model bla
+Accuracy = 93.36% (76263/81687)
+
+
+./train -B 1 -w1 2 -w0 1 -c 5 -s 4 -v 5 training_names_tksp_classifier.features_short_data
+Cross Validation Accuracy = 93.3196%
+Accuracy = 87.4039% (7050/8066)
+
+
+
+
+**************** LIBSVM ******************
+./svm-train ../liblinear-1.94/training_names_tksp_classifier.features_short_data training_names_tksp_classifier.features_short_data.svm_model
+./svm-predict ../liblinear-1.94/test_names_tksp_classifier.features_data training_names_tksp_classifier.features_short_data.svm_model bla
+Accuracy = 87.3791% (7048/8066) (classification)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

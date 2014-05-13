@@ -350,7 +350,7 @@ public class GenCandidateEntityNamePairs {
         Vector<TokenSpan> surroundingTokenSpans = Utils.getTokenSpans(doc.getRawText(), offset, name.length());
         for (TokenSpan ts : surroundingTokenSpans) {
             // extract n'
-            String extendedName = doc.getRawText().substring(ts.start, ts.end);
+            String extendedName = ts.name;
             
             // for each (n',e') with p(n'|e') >= theta and n' \in t=n-,n,n+
             if (!indexOfCandidates.containsKey(extendedName)) {
@@ -375,7 +375,7 @@ public class GenCandidateEntityNamePairs {
             
             for (TokenSpan ts : surroundingTokenSpans) {
                 // extract n'
-                String extendedName = doc.getRawText().substring(ts.start, ts.end);
+                String extendedName = ts.name;
                                     
                 // p(dummy | name)
                 double dummyProb = dummyInit;
@@ -441,7 +441,7 @@ public class GenCandidateEntityNamePairs {
             double dummyDenominator = 0.0;
 
             for (TokenSpan ts : surroundingTokenSpans) {
-                String extendedName = doc.getRawText().substring(ts.start, ts.end);
+                String extendedName = ts.name;
                 
                 double dummyProb = dummyInit;
                 if (dummyProbabilities.containsKey(extendedName)) {
@@ -498,7 +498,7 @@ public class GenCandidateEntityNamePairs {
         int winnerOffset = -1;
         for (TokenSpan ts : surroundingTokenSpans) {
             // extract n'
-            String extendedName = doc.getRawText().substring(ts.start, ts.end);
+            String extendedName = ts.name;
             System.out.println("  TOKEN SPAN: " + extendedName);
 
             // for each (n',e') with p(n'|e') >= theta and n' \in t=n-,n,n+
@@ -518,17 +518,17 @@ public class GenCandidateEntityNamePairs {
             
             // This might be improved to a O(1) by using a HashSet
             for (Candidate cand : indexOfCandidates.get(extendedName)) {
-                if (cand.entityURL.compareTo(winnerURL) == 0 && ts.start == cand.textIndex && dict.containsKey(extendedName) && 
+                if (cand.entityURL.compareTo(winnerURL) == 0 && ts.offset == cand.textIndex && dict.containsKey(extendedName) && 
                         dict.get(extendedName).containsKey(winnerURL)) {
                     System.out.println("     CAND APPEARING HERE :::" + extendedName + " ;url=" + cand.entityURL + 
                             " ;p(n|e)=" + cand.prob_n_cond_e + "; p(e|n,∃e)=" + dict.get(extendedName).get(winnerURL) + "; offset=" + cand.textIndex);
                 } 
                     
-                if (cand.entityURL.compareTo(winnerURL) == 0 && ts.start == cand.textIndex) {
+                if (cand.entityURL.compareTo(winnerURL) == 0 && ts.offset == cand.textIndex) {
                     if (isBetterNameGivenEntity(winnerURL, extendedName, cand.prob_n_cond_e, winnerName, winnerProb_name_cond_ent)) {
                         winnerName = extendedName;
                         winnerProb_name_cond_ent = cand.prob_n_cond_e;
-                        winnerOffset = ts.start;                           
+                        winnerOffset = ts.offset;                           
                     }
                 }
             }

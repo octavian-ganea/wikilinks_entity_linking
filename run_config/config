@@ -38,6 +38,8 @@ improvedIITB:false
 ###############################################################################
 [tksp-classifier]
 wikiRedirectsFile:wikiRedirects/wikipedia_redirect.txt
+##invdictFilename: crosswikiPrunnedData/prunned_invdict_IITB
+##dictFilename: crosswikiPrunnedData/prunned_dict_IITB
 invdictFilename: mergedCrosswikis/inv.dict.merged_full
 dictFilename: mergedCrosswikis/dict.merged
 allEntsFilename : entsWithDocFrequencies/ents.txt
@@ -51,6 +53,14 @@ IITBDocsDir: evalData/IITB/crawledDocs/
 testOutputFileRoot: test_names_tksp_classifier
 ###############################################################################
 
+
+###############################################################################
+[tksp-classifier-eval]
+trainingModelFilename : /home/octi/Desktop/nlp/liblinear-1.94/training_names_tksp_classifier.features_short_data.model
+trainingFilename : /home/octi/Desktop/nlp/liblinear-1.94/training_names_tksp_classifier.features_short_data
+testFilename : /home/octi/Desktop/nlp/liblinear-1.94/test_names_tksp_classifier.features_data
+testVerboseFilename : /home/octi/Desktop/nlp/liblinear-1.94/test_names_tksp_classifier.features_verbose
+###############################################################################
 
 
 ###############################################################################

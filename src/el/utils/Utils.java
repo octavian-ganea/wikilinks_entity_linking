@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.StringTokenizer;
 import java.util.Vector;
 
 import edu.stanford.nlp.ling.CoreLabel;
+import edu.stanford.nlp.ling.TaggedWord;
 import edu.stanford.nlp.process.CoreLabelTokenFactory;
 import edu.stanford.nlp.process.PTBTokenizer;
 import edu.stanford.nlp.tagger.maxent.MaxentTagger;
@@ -22,90 +24,87 @@ import edu.stanford.nlp.tagger.maxent.TTags;
 import el.TokenSpan;
 
 public class Utils {
-	static public MaxentTagger tagger = null;
+	static public MaxentTagger posTagger = null;
 	
+    // Maybe someone using the PoS tagger will want to use tagger.tokenizeText(r) instead of this 
+    static public List<CoreLabel> getTokens(String s) {
+        PTBTokenizer ptbt = new PTBTokenizer(
+                new StringReader(s), new CoreLabelTokenFactory(), "ptb3Escaping=false,untokenizable=noneDelete");
+        return ptbt.tokenize();
+    }
+    
     // Returns a set of PoS tags for a given input text.    
     // v[2*i] = i-th word; v[2*i+1] = i-th tag 
-    public static Vector<String> getPosTags(String s) {
-        if (tagger == null) {
+    public static ArrayList<TaggedWord> getPosTags(String s) {
+        if (posTagger == null) {
             Properties props = new Properties();
-            props.setProperty("outputFormat", "tsv");
-            tagger = new MaxentTagger("lib/stanford-postagger-2014-01-04/models/english-bidirectional-distsim.tagger",
+            props.setProperty("ptb3Escaping", "false");
+            props.setProperty("untokenizable", "noneDelete");
+            posTagger = new MaxentTagger("lib/stanford-postagger-2014-01-04/models/english-bidirectional-distsim.tagger",
                     props);
         }
-        Vector<String> v = new Vector<String>();
-        StringTokenizer tags = new StringTokenizer(tagger.tagString(s), "\n");
+        return posTagger.tagSentence(Utils.getTokens(s));
+    }
         
-        HashMap<String,String> rez = new HashMap<String,String>();
-        while (tags.hasMoreTokens()) {
-            StringTokenizer st = new StringTokenizer(tags.nextToken(), "\t");
-            v.add(st.nextToken());
-            v.add(st.nextToken());
+
+    static public PairOfInts getStartAndEndIndexesOfTkspInContextTags(
+            String context, 
+            ArrayList<TaggedWord> contextTags, 
+            TokenSpan tksp) {
+
+        int startIndexOfTkspInContextTags = -1;
+        int endIndexOfTkspInContextTags = -1;
+
+        for (int j = 0; j < contextTags.size(); j ++) {
+            if (contextTags.get(j).beginPosition() == tksp.offset) {
+                startIndexOfTkspInContextTags = j;
+            }
+            if (contextTags.get(j).endPosition() == tksp.offset + tksp.name.length()) {
+                endIndexOfTkspInContextTags = j;
+            }            
         }
+               
+        if (startIndexOfTkspInContextTags < 0 || endIndexOfTkspInContextTags < 0)
+            return new PairOfInts(-1, -1);
         
-        return v;
+        return new PairOfInts(startIndexOfTkspInContextTags, endIndexOfTkspInContextTags);
     }
     
-    // Maybe someone using the PoS tagger will want to use tagger.tokenizeText(r) instead of this 
-    static public Vector<String> getTokens(String s) {
-        Vector<String> v = new Vector<String>();
-        PTBTokenizer ptbt = new PTBTokenizer(
-                new StringReader(s), new CoreLabelTokenFactory(), "ptb3Escaping=false");
-        List<CoreLabel> tokens = ptbt.tokenize();
-        for (CoreLabel cl : tokens) {
-            v.add(cl.word());
-        }
-        return v;
-    }
-    
-    static public int numTokensUsingStanfordNLP(String s) {
-        return getTokens(s).size();
-    }
-    
-    
-    // smallStringToEnd is needed because there might be multiple names within the same sentence
-    static public Vector<String> getPreviousAndNextTokensAndPosTags(String context, String smallString, String smallStringToEnd) {
-        // Add a dot at the beginning of the context to avoid having empty results.
-        Vector<String> contextTags = getPosTags("." + context + ".");
-        Vector<String> smallStringTags = getPosTags(smallString);
-        Vector<String> smallStringToEndTags = getPosTags(smallStringToEnd + ".");
+    static public ArrayList<TaggedWord> getFirstLastPreviousAndNextTokensAndPosTags(
+            String context, 
+            ArrayList<TaggedWord> contextTags, 
+            TokenSpan tksp) {
         
-       
-        int index = contextTags.size() - smallStringToEndTags.size();
-        if (index <= 0) {
-            System.err.println("[FATAL] getPreviousAndNextTokensUsingStanfordNLP fatal error. context = " + context + " ; small string = " + smallString +
-                    " ; small string to the end = " + smallStringToEnd  + " " + index);
-            System.exit(1);
+        PairOfInts indexes = getStartAndEndIndexesOfTkspInContextTags(context, contextTags, tksp);
+
+        int startIndexOfTkspInContextTags = indexes.x;
+        int endIndexOfTkspInContextTags = indexes.y;        
+        
+        if (startIndexOfTkspInContextTags < 0 || endIndexOfTkspInContextTags < 0) {
+            return null;
         }
 
-        for (int j = 0; j < smallStringTags.size(); j += 2) {
-            if (!smallStringTags.get(j).equals(contextTags.get(index + j))) {
-                index = -1;
-                break;
-            }
-        }
-        if (index <= 0) {
-            System.err.println("[FATAL] getPreviousAndNextTokensUsingStanfordNLP fatal error. context = " + context + " ; small string = " + smallString +
-                    " ; small string to the end = " + smallStringToEnd  + " " + index);
-            System.exit(1);
-        }
-        for (int j = 0; j < smallStringToEndTags.size(); j += 2) {
-            if (!smallStringToEndTags.get(j).equals(contextTags.get(index + j))) {
-                index = -1;
-                break;
-            }
-        }
-        if (index <= 0) {
-            System.err.println("[FATAL] getPreviousAndNextTokensUsingStanfordNLP fatal error. context = " + context + " ; small string = " + smallString +
-                    " ; small string to the end = " + smallStringToEnd  + " " + index);
-            System.exit(1);
+        ArrayList<TaggedWord> rez = new ArrayList<TaggedWord>();
+
+        // Add previous token.
+        if (startIndexOfTkspInContextTags == 0) {
+            rez.add(new TaggedWord(".", "."));
+        } else {
+            rez.add(contextTags.get(startIndexOfTkspInContextTags - 1));
         }
         
-        Vector<String> rez = new Vector<String>();
-        rez.add(contextTags.get(index - 2));
-        rez.add(contextTags.get(index - 1));
-        rez.add(contextTags.get(index + smallStringTags.size()));
-        rez.add(contextTags.get(index + smallStringTags.size() + 1));
+        // Add next token.
+        if (endIndexOfTkspInContextTags + 1 >= contextTags.size()) {
+            rez.add(new TaggedWord(".", "."));
+        } else {
+            rez.add(contextTags.get(endIndexOfTkspInContextTags + 1));
+        }
+        
+        // Add first token.
+        rez.add(contextTags.get(startIndexOfTkspInContextTags));
+        
+        // Add last token.
+        rez.add(contextTags.get(endIndexOfTkspInContextTags));
         return rez;
     }
     
@@ -194,18 +193,18 @@ public class Utils {
         }
 		
 		// n
-		spans.add(new TokenSpan(startN, endN+1));
+		spans.add(new TokenSpan(startN, text.substring(startN, endN+1)));
 		if (startMinusN < startN) {
 			// n-,n
-			spans.add(new TokenSpan(startMinusN, endN+1));			
+			spans.add(new TokenSpan(startMinusN, text.substring(startMinusN, endN+1)));			
 		}
 		if (endPlusN > endN) {
 			// n,n+
-			spans.add(new TokenSpan(startN, endPlusN+1));			
+			spans.add(new TokenSpan(startN, text.substring(startN, endPlusN+1)));			
 		}
 		if (endPlusN > endN && startMinusN < startN) {
 			// n-,n,n+
-			spans.add(new TokenSpan(startMinusN, endPlusN+1));			
+			spans.add(new TokenSpan(startMinusN, text.substring(startMinusN, endPlusN+1)));			
 		}
 		
 		return spans;

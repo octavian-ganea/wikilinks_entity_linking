@@ -1,10 +1,12 @@
 package el;
 
+
 public class TokenSpan {
-	public int start;
-	public int end;
-	public TokenSpan(int start, int end) {
-		this.start = start;
-		this.end = end;
+	public int offset;
+	public String name;
+	
+	public TokenSpan(int offset, String name) {
+		this.offset = offset;
+		this.name = name;
 	}
 }

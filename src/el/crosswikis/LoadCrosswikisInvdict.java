@@ -62,7 +62,6 @@ public class LoadCrosswikisInvdict {
             nr_line ++;
             if (nr_line % 20000000 == 0) {
                 System.err.println("loaded " + nr_line);
-                //break; /////////////////////////////////////////////////
             }
 
             StringTokenizer st = new StringTokenizer(line, "\t");
