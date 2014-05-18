@@ -65,7 +65,6 @@ public class EvalLibLinearModel {
         return point;
     }
     
-    // Compute <w,x>
     private double decisionFunction(Vector<Double> point, ScoreType scoreType) {
         if (scoreType == ScoreType.LIBLINEAR_SCORE) {
             BigDecimal rez = new BigDecimal(0.0);

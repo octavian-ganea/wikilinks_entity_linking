@@ -1,4 +1,4 @@
-package el.entity_existence_probs;
+package el.keyphraseness;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

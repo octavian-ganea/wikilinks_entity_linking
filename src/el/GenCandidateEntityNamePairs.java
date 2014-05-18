@@ -12,9 +12,9 @@ import java.util.Vector;
 import el.context_probs.LoadContextProbs;
 import el.crosswikis.LoadCrosswikisDict;
 import el.crosswikis.LoadCrosswikisInvdict;
-import el.entity_existence_probs.DummyIntPair;
-import el.entity_existence_probs.LoadExistenceCrosswikisProbs;
 import el.input_data_pipeline.*;
+import el.keyphraseness.DummyIntPair;
+import el.keyphraseness.LoadKeyphrasenessDummyProbs;
 import el.utils.Utils;
 import el.wikilinks_ents_or_names_with_freqs.LoadWikilinksEntsOrNamesWithFreqs;
 
@@ -779,8 +779,6 @@ public class GenCandidateEntityNamePairs {
             String allEntsFilename, 
             String existenceProbsFilename,
             String contextProbsFilename,
-            String valueToKeep,
-            double multiplyConst,
             double theta, 
             GenericPagesIterator inputPagesIterator,
             boolean extendedTokenSpan,
@@ -810,8 +808,7 @@ public class GenCandidateEntityNamePairs {
         if (includeDummyEnt) {
             // Select one possible set of existence probs:
             
-            // dummyProbabilities = LoadKeyphrasenessDummyProbs.load(existenceProbsFilename);
-            dummyProbabilities = LoadExistenceCrosswikisProbs.load(existenceProbsFilename, valueToKeep, multiplyConst);
+            dummyProbabilities = LoadKeyphrasenessDummyProbs.load(existenceProbsFilename);
         }
         
         System.err.println("[INFO] Writing winner entities...");
@@ -849,7 +846,9 @@ public class GenCandidateEntityNamePairs {
                         debugMentionsInfos);
 
                 // Annotate the input doc.rawText using the new found entities:
-                // AnnotateDocWithNewAnnotations.run(doc, matchings);
+                /*
+                 * AnnotateDocWithNewAnnotations.run(doc, matchings);
+                 */
             } else {
                 Vector<Candidate>  matchings = 
                     GenWinningEntitiesWithBaselineApproach(

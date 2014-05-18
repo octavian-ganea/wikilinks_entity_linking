@@ -1,4 +1,4 @@
-package el.entity_existence_probs;
+package el.keyphraseness;
 
 
 // Class used to store the counters for dummy probabilities P(dummy | name)

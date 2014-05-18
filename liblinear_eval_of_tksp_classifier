@@ -43,9 +43,9 @@ Accuracy = 87.6767% (7072/8066)
 
 BEST OF ALL types of solvers !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ./train -B 1 -w1 2 -w0 1 -c 5 -s 4 training_names_tksp_classifier.features_short_data
-Accuracy = 87.7387% (7077/8066)   
+Accuracy = 87.9618% (7095/8066)
 ./predict training_names_tksp_classifier.features_short_data training_names_tksp_classifier.features_short_data.model bla
-Accuracy = 93.36% (76263/81687)
+Accuracy = 93.9855% (213850/227535)
 
 
 ./train -B 1 -w1 2 -w0 1 -c 5 -s 4 -v 5 training_names_tksp_classifier.features_short_data
@@ -54,24 +54,62 @@ Accuracy = 87.4039% (7050/8066)
 
 
 
+python ../libsvm-3.18/ tools/subset.py training_names_tksp_classifier.features_short_data 10000 training_names_tksp_classifier.features_short_data.sample
+../libsvm-3.18/tools/grid.py -log2c -3,10,1 -log2g null -svmtrain ./train -B 1 -w1 2 -w0 1 training_names_tksp_classifier.features_short_data.sample 
+./train -B 1 -w1 2 -w0 1 -c 16 training_names_tksp_classifier.features_short_data
+./predict test_names_tksp_classifier.features_data training_names_tksp_classifier.features_short_data.model bla
+Accuracy = 87.7387% (7077/8066)
+For this model:
+Eval for file : /home/octi/Desktop/nlp/liblinear-1.94/test_names_tksp_classifier.features_data
+[FINAL RESULTS OF EACH CASE] scoretype = LIBLINEAR_SCORE ; accuracy = 85.6431
+[FINAL RESULTS OF EACH CASE] scoretype = DaCROSSWIKIS_SCORE_ONLY ; accuracy = 82.9179
+[FINAL RESULTS OF EACH CASE] scoretype = LONGEST_TKSP_SCORE ; accuracy = 46.8927
+
+Eval for file : /home/octi/Desktop/nlp/liblinear-1.94/training_names_tksp_classifier.features_short_data
+[FINAL RESULTS OF EACH CASE] scoretype = LIBLINEAR_SCORE ; accuracy = 93.0103
+[FINAL RESULTS OF EACH CASE] scoretype = CROSSWIKIS_SCORE_ONLY ; accuracy = 83.6726
+[FINAL RESULTS OF EACH CASE] scoretype = LONGEST_TKSP_SCORE ; accuracy = 40.8627
+
+
+
+
+../libsvm-3.18/tools/grid.py -log2c -3,10,1 -log2g null -svmtrain ./train -B 1 -w1 2 -w0 1 -s 4 training_names_tksp_classifier.features_short_data.sample
+8.0 94.46
+./train -B 1 -w1 2 -w0 1 -c 8 training_names_tksp_classifier.features_short_data
+./predict test_names_tksp_classifier.features_data training_names_tksp_classifier.features_short_data.model bla
+Accuracy = 87.7263% (7076/8066)
+
+
 
 **************** LIBSVM ******************
-./svm-train ../liblinear-1.94/training_names_tksp_classifier.features_short_data training_names_tksp_classifier.features_short_data.svm_model
-./svm-predict ../liblinear-1.94/test_names_tksp_classifier.features_data training_names_tksp_classifier.features_short_data.svm_model bla
-Accuracy = 87.3791% (7048/8066) (classification)
+python tools/subset.py training_names_tksp_classifier.features_data 50000 training_names_tksp_classifier.features_sample_data training_names_tksp_classifier.features_rest_data
+python tools/subset.py training_names_tksp_classifier.features_rest_data 10000 training_names_tksp_classifier.features_rest_data.sample_for_test
+python tools/subset.py training_names_tksp_classifier.features_sample_data 2000 training_names_tksp_classifier.features_sample_data.sample_for_param_tunning
+
+Param tunning:
+first: 
+python tools/grid.py -w1 2 -w0 1 -m 100000  training_names_tksp_classifier.features_sample_data.sample_for_param_tunning
+128.0 0.0078125 93.3
+second, finer grained:
+python tools/grid.py -log2c 5,9,1 -log2g -8,-6,0.333 -w1 2 -w0 1 -m 100000  training_names_tksp_classifier.features_sample_data.sample_for_param_tunning
+64.0 0.00780708666399 93.4
+python tools/grid.py -log2c 6,7,1 -log2g -7.6,-6.4,0.2 -w1 2 -w0 1 -m 100000  training_names_tksp_classifier.features_sample_data.sample_for_param_tunning
+64.0 0.0078125 93.4
 
 
 
+./svm-train -w1 2 -w0 1 -m 10000 training_names_tksp_classifier.features_sample_data
+./svm-predict training_names_tksp_classifier.features_rest_data.sample_for_test training_names_tksp_classifier.features_sample_data.model bla
+Accuracy = 93.48% (9348/10000) (classification)
+./svm-predict test_names_tksp_classifier.features_data training_names_tksp_classifier.features_sample_data.model bla
+Accuracy = 88.3957% (7130/8066) (classification)
 
-
-
-
-
-
-
-
-
-
+ echo $OMP_NUM_THREADS
+./svm-train -w1 2 -w0 1 -m 10000 -c 64 -g 0.0078125 training_names_tksp_classifier.features_sample_data
+./svm-predict training_names_tksp_classifier.features_rest_data.sample_for_test training_names_tksp_classifier.features_sample_data.model bla
+Accuracy = 94.37% (9437/10000) (classification)
+./svm-predict test_names_tksp_classifier.features_data training_names_tksp_classifier.features_sample_data.model bla
+Accuracy = 87.8998% (7090/8066) (classification)
 
 
 

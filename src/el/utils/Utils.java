@@ -61,6 +61,9 @@ public class Utils {
             }
             if (contextTags.get(j).endPosition() == tksp.offset + tksp.name.length()) {
                 endIndexOfTkspInContextTags = j;
+                if (startIndexOfTkspInContextTags >= 0) {
+                    break;
+                }
             }            
         }
                

@@ -8,7 +8,6 @@ import el.correct_tksp_classifier.ComputeTkspFeatures;
 import el.correct_tksp_classifier.EvalLibLinearModel;
 import el.correct_tksp_classifier.ScoreType;
 import el.crosswikis.SortInvdictByName;
-import el.entity_existence_probs.ComputeCrosswikisExistenceProbs;
 import el.input_data_pipeline.iitb.IITBPagesIterator;
 import el.unittests.AllUnittests;
 import el.wikipedia_redirects.WikiRedirects;
@@ -26,20 +25,10 @@ public class Main {
 
         ///////////// All code starts from here //////////////////////////
 
-        //Utils.WriteIITBGroundTruthFileInXMLFormat();
-
-
-        // Compute p(\exist ent | name) in a different fashion using the Crosswikis data.
-        // OUTPUT: STDOUT
-        if (args[0].compareTo("[ComputeExistenceOfNameAsEntity]") == 0) {  
-            WikiRedirects.loadWikiRedirects(config.get("wikiRedirectsFile"));
-            ComputeCrosswikisExistenceProbs.compute(
-                    config.get("allEntsFilename"), 
-                    config.get("allNamesFilename"), 
-                    config.get("invdictSortedFilename"), 
-                    config.get("dictFilename"));
-            return;
-        }
+        /*
+         *  Utils.WriteIITBGroundTruthFileInXMLFormat();
+         * 
+         */
 
         // Classifier for selecting the correct tksp when entity is given.
         // Training data: Wikilinks
@@ -194,8 +183,6 @@ public class Main {
                     config.get("allEntsFilename"), 
                     config.get("existenceProbsFilename"),
                     config.get("contextProbsFilename"),
-                    config.get("valueToKeep"),
-                    Double.parseDouble(config.get("multiplyConst")), 
                     Double.parseDouble(config.get("theta")),
                     new IITBPagesIterator(config.get("groundTruthAnnotationsFilename"), additionalIITBAnnotationsFile, config.get("IITBDocsDir")),
                     Boolean.parseBoolean(config.get("extendedTokenSpan")),

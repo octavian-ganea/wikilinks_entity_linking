@@ -15,10 +15,6 @@ contextProbsFilename:  contextsProbsIITB/probs.txt
 # file containing P(context | n,e)
 existenceProbsFilename: existenceProbsFromCrosswikis/probs.txt
 # P(\exists ent | name)
-valueToKeep : weightedByNumEntsScore
-# for existence dummy probs
-multiplyConst : 10.0
-# for existence dummy probs
 allEntsFilename : entsWithDocFrequencies/ents.txt
 # all entities from Wikilinks
 groundTruthAnnotationsFilename: evalData/IITB/CSAW_Annotations.xml
@@ -61,21 +57,6 @@ trainingFilename : /home/octi/Desktop/nlp/liblinear-1.94/training_names_tksp_cla
 testFilename : /home/octi/Desktop/nlp/liblinear-1.94/test_names_tksp_classifier.features_data
 testVerboseFilename : /home/octi/Desktop/nlp/liblinear-1.94/test_names_tksp_classifier.features_verbose
 ###############################################################################
-
-
-###############################################################################
-[ComputeExistenceOfNameAsEntity]
-wikiRedirectsFile : wikiRedirects/wikipedia_redirect.txt
-allEntsFilename : entsWithDocFrequencies/ents.txt
-# file with all entities from Wikilinks generated with [ExtractEntsWithFreq]
-allNamesFilename : namesWithDocFrequencies/names.txt
-# file with all names from Wikilinks generated with [ExtractNamesWithDocFreq]
-invdictSortedFilename : mergedCrosswikis/sortedByName_invdict.merged
-# sorted by name Invdict file generated with [SortInvdictByName]
-dictFilename : mergedCrosswikis/dict.merged
-###############################################################################
-
-
 
 
 ###############################################################################
