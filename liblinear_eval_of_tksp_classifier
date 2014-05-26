@@ -1,78 +1,4 @@
-TODO:
-- eval method for liblinear
-- last heuristic: choose always the one with highest p(n|e) 
-- libSVM ?
-
-
-**************** LIBLINEAR ******************
-- super fast on my data
-
-
-./train -B 1 training_names_tksp_classifier.features_short_data
-./predict test_names_tksp_classifier.features_data training_names_tksp_classifier.features_short_data.model bla
-Accuracy = 86.3873% (6968/8066)
-
-./train -v 5 -B 1 training_names_tksp_classifier.features_short_data
-Cross Validation Accuracy = 93.2413% (overfitting !!!!)
-Accuracy = 86.3873% (6968/8066)
-
-./train -v 5 -B 1 -w1 2 -w0 1 training_names_tksp_classifier.features_short_data
-Accuracy = 86.3873% (6968/8066)
-
-./train -B 1 -w1 2 -w0 1 -c 10 training_names_tksp_classifier.features_short_data
-Accuracy = 87.3419% (7045/8066)
-
-
-./train -B 1 -w1 2 -w0 1 -c 50 training_names_tksp_classifier.features_short_data
-Accuracy = 87.0568% (7022/8066)
-
-
-./train -B 1 -w1 2 -w0 1 -c 5 training_names_tksp_classifier.features_short_data
-Accuracy = 87.5279% (7060/8066)
-
-
-./train -B 1 -w1 1.5 -w0 1 -c 4 training_names_tksp_classifier.features_short_data
-Accuracy = 87.1436% (7029/8066)
-
-./train -B 1 -w1 2 -w0 1 -c 4 -s 2 training_names_tksp_classifier.features_short_data
-Accuracy = 87.6643% (7071/8066)
-
-
-./train -B 1 -w1 2 -w0 1 -c 1 -s 3 training_names_tksp_classifier.features_short_data
-Accuracy = 87.6767% (7072/8066)
-
-BEST OF ALL types of solvers !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-./train -B 1 -w1 2 -w0 1 -c 5 -s 4 training_names_tksp_classifier.features_short_data
-Accuracy = 87.9618% (7095/8066)
-./predict training_names_tksp_classifier.features_short_data training_names_tksp_classifier.features_short_data.model bla
-Accuracy = 93.9855% (213850/227535)
-
-
-./train -B 1 -w1 2 -w0 1 -c 5 -s 4 -v 5 training_names_tksp_classifier.features_short_data
-Cross Validation Accuracy = 93.3196%
-Accuracy = 87.4039% (7050/8066)
-
-
-
-python ../libsvm-3.18/ tools/subset.py training_names_tksp_classifier.features_short_data 10000 training_names_tksp_classifier.features_short_data.sample
-../libsvm-3.18/tools/grid.py -log2c -3,10,1 -log2g null -svmtrain ./train -B 1 -w1 2 -w0 1 training_names_tksp_classifier.features_short_data.sample 
-./train -B 1 -w1 2 -w0 1 -c 16 training_names_tksp_classifier.features_short_data
-./predict test_names_tksp_classifier.features_data training_names_tksp_classifier.features_short_data.model bla
-Accuracy = 87.7387% (7077/8066)
-For this model:
-Eval for file : /home/octi/Desktop/nlp/liblinear-1.94/test_names_tksp_classifier.features_data
-[FINAL RESULTS OF EACH CASE] scoretype = LIBLINEAR_SCORE ; accuracy = 85.6431
-[FINAL RESULTS OF EACH CASE] scoretype = DaCROSSWIKIS_SCORE_ONLY ; accuracy = 82.9179
-[FINAL RESULTS OF EACH CASE] scoretype = LONGEST_TKSP_SCORE ; accuracy = 46.8927
-
-Eval for file : /home/octi/Desktop/nlp/liblinear-1.94/training_names_tksp_classifier.features_short_data
-[FINAL RESULTS OF EACH CASE] scoretype = LIBLINEAR_SCORE ; accuracy = 93.0103
-[FINAL RESULTS OF EACH CASE] scoretype = CROSSWIKIS_SCORE_ONLY ; accuracy = 83.6726
-[FINAL RESULTS OF EACH CASE] scoretype = LONGEST_TKSP_SCORE ; accuracy = 40.8627
-
-
-
-
+Liblinear param tunning:
 ../libsvm-3.18/tools/grid.py -log2c -3,10,1 -log2g null -svmtrain ./train -B 1 -w1 2 -w0 1 -s 4 training_names_tksp_classifier.features_short_data.sample
 8.0 94.46
 ./train -B 1 -w1 2 -w0 1 -c 8 training_names_tksp_classifier.features_short_data
@@ -81,12 +7,17 @@ Accuracy = 87.7263% (7076/8066)
 
 
 
-**************** LIBSVM ******************
-python tools/subset.py training_names_tksp_classifier.features_data 50000 training_names_tksp_classifier.features_sample_data training_names_tksp_classifier.features_rest_data
-python tools/subset.py training_names_tksp_classifier.features_rest_data 10000 training_names_tksp_classifier.features_rest_data.sample_for_test
-python tools/subset.py training_names_tksp_classifier.features_sample_data 2000 training_names_tksp_classifier.features_sample_data.sample_for_param_tunning
+
+Train/Test data:
+java -cp "lib/*" -Xms100G -Xmx100G -XX:-UseGCOverheadLimit -XX:-UseCompressedOops el.main.Main [tksp-classifier-sample-input-data]
+
+Subsets for SVM/Linear:
+ganeao@sgs-r815-01:/mnt/SG/ganeao/libsvm-3.18$ python tools/subset.py ../wikilinks_project/wikilinks_train_data 100000 wikilinks_train_data_svm
+ganeao@sgs-r815-01:/mnt/SG/ganeao/liblinear-1.94$ cp ../wikilinks_project/wikilinks_train_data wikilinks_train_data_linear
+
 
 Param tunning:
+python tools/subset.py training_names_tksp_classifier.features_sample_data 2000 training_names_tksp_classifier.features_sample_data.sample_for_param_tunning
 first: 
 python tools/grid.py -w1 2 -w0 1 -m 100000  training_names_tksp_classifier.features_sample_data.sample_for_param_tunning
 128.0 0.0078125 93.3
@@ -97,20 +28,52 @@ python tools/grid.py -log2c 6,7,1 -log2g -7.6,-6.4,0.2 -w1 2 -w0 1 -m 100000  tr
 64.0 0.0078125 93.4
 
 
+**************** LIBSVM ******************
+echo $OMP_NUM_THREADS
+./svm-train -w1 2 -w0 1 -m 10000 -c 64 -g 0.0078125 wikilinks_train_data_svm
+./svm-predict ../wikilinks_project/wikilinks_test_data   wikilinks_train_data_svm.model bla
+Accuracy = 94.9463% (303063/319194) (classification)
+./svm-predict test_names_tksp_classifier.features_data wikilinks_train_data_svm.model bla
+Accuracy = 87.5031% (7058/8066) (classification)
 
-./svm-train -w1 2 -w0 1 -m 10000 training_names_tksp_classifier.features_sample_data
-./svm-predict training_names_tksp_classifier.features_rest_data.sample_for_test training_names_tksp_classifier.features_sample_data.model bla
-Accuracy = 93.48% (9348/10000) (classification)
-./svm-predict test_names_tksp_classifier.features_data training_names_tksp_classifier.features_sample_data.model bla
-Accuracy = 88.3957% (7130/8066) (classification)
 
- echo $OMP_NUM_THREADS
-./svm-train -w1 2 -w0 1 -m 10000 -c 64 -g 0.0078125 training_names_tksp_classifier.features_sample_data
-./svm-predict training_names_tksp_classifier.features_rest_data.sample_for_test training_names_tksp_classifier.features_sample_data.model bla
-Accuracy = 94.37% (9437/10000) (classification)
-./svm-predict test_names_tksp_classifier.features_data training_names_tksp_classifier.features_sample_data.model bla
-Accuracy = 87.8998% (7090/8066) (classification)
+**************** Liblinear ******************
+./train -B 1 -w1 2 -w0 1 -c 8 wikilinks_train_data_linear
+./predict  ../wikilinks_project/wikilinks_test_data wikilinks_train_data_linear.model	 bla
+Accuracy = 94.2894% (300966/319194)
 
+./predict test_names_tksp_classifier.features_data wikilinks_train_data_linear.model bla
+Accuracy = 87.937% (7093/8066)
+
+
+
+java -cp "lib/*" -Xms100G -Xmx100G -XX:-UseGCOverheadLimit -XX:-UseCompressedOops el.main.Main [tksp-classifier-eval] 2> >(tee stderr.log >&2)
+
+
+
+Eval LIBLINEAR for file : /mnt/SG/ganeao/wikilinks_project/test_names_tksp_classifier.features_data
+[FINAL RESULTS OF EACH CASE] scoretype = CLASSIFIER ; accuracy = 78.1987
+[FINAL RESULTS OF EACH CASE] scoretype = HYPERPLANE_DISTANCE ; accuracy = 85.4769
+[FINAL RESULTS OF EACH CASE] scoretype = CROSSWIKIS_PROB_ONLY ; accuracy = 82.9179
+[FINAL RESULTS OF EACH CASE] scoretype = LONGEST_TKSP ; accuracy = 46.8927
+
+Eval LIBLINEAR for file : /mnt/SG/ganeao/wikilinks_project/wikilinks_test_data
+[FINAL RESULTS OF EACH CASE] scoretype = CLASSIFIER ; accuracy = 86.0017
+[FINAL RESULTS OF EACH CASE] scoretype = HYPERPLANE_DISTANCE ; accuracy = 93.3228
+[FINAL RESULTS OF EACH CASE] scoretype = CROSSWIKIS_PROB_ONLY ; accuracy = 84.9435
+[FINAL RESULTS OF EACH CASE] scoretype = LONGEST_TKSP ; accuracy = 38.0412
+
+Eval LIBSVM for file : /mnt/SG/ganeao/wikilinks_project/test_names_tksp_classifier.features_data
+[FINAL RESULTS OF EACH CASE] scoretype = CLASSIFIER ; accuracy = 74.9418
+[FINAL RESULTS OF EACH CASE] scoretype = HYPERPLANE_DISTANCE ; accuracy = 85.2775
+
+
+Eval LIBSVM for file : /mnt/SG/ganeao/wikilinks_project/wikilinks_test_data
+[FINAL RESULTS OF EACH POINT] accuracy = 94.9463
+[FINAL RESULTS OF EACH CASE] scoretype = CLASSIFIER ; accuracy = 87.3948
+[FINAL RESULTS OF EACH CASE] scoretype = HYPERPLANE_DISTANCE ; accuracy = 94.2091
+[FINAL RESULTS OF EACH CASE] scoretype = CROSSWIKIS_PROB_ONLY ; accuracy = 84.9435
+[FINAL RESULTS OF EACH CASE] scoretype = LONGEST_TKSP ; accuracy = 38.0412
 
 
 

@@ -98,13 +98,6 @@ public class LoadCrosswikisDict {
                 continue;             
             }
             
-            /***************************
-            if (cprob < 0.002) {
-                line = in.readLine();
-                continue;             
-            }
-            ***************************/           
-            
             if (!dict.containsKey(name)) {
                 dict.put(name, new TreeMap<String, Double>());
             }

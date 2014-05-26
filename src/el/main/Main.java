@@ -2,12 +2,10 @@ package el.main;
 
 import java.util.HashMap;
 
-import el.GenCandidateEntityNamePairs;
-import el.context_probs.ComputeContextProbsFromWikilinks;
-import el.correct_tksp_classifier.ComputeTkspFeatures;
-import el.correct_tksp_classifier.EvalLibLinearModel;
-import el.correct_tksp_classifier.ScoreType;
-import el.crosswikis.SortInvdictByName;
+import el.*;
+import el.context_probs.*;
+import el.correct_tksp_classifier.*;
+import el.crosswikis.*;
 import el.input_data_pipeline.iitb.IITBPagesIterator;
 import el.unittests.AllUnittests;
 import el.wikipedia_redirects.WikiRedirects;
@@ -15,6 +13,10 @@ import el.wikipedia_redirects.WikiRedirects;
 public class Main {
     ///////////////////// MAIN ////////////////////////////////////////////
     public static void main(String[] args) throws Exception {
+        String s = "信用卡";
+        System.out.println((int)(s.charAt(1)));
+        
+        
         AllUnittests.run();     
         
         if (args.length == 0) {
@@ -30,6 +32,7 @@ public class Main {
          * 
          */
 
+        
         // Classifier for selecting the correct tksp when entity is given.
         // Training data: Wikilinks
         // Test data: IITB
@@ -59,20 +62,24 @@ public class Main {
             return;
         }
         
+        
+        if (args[0].compareTo("[tksp-classifier-sample-input-data]") == 0) {  
+            SampleFullTestCases.sample(config.get("wikilinksFilename"), config.get("testWikilinksFilename"), config.get("trainWikilinksFilename"));
+            return;
+        }
+        
+        
         if (args[0].compareTo("[tksp-classifier-eval]") == 0) {  
-            EvalLibLinearModel evalObj = new EvalLibLinearModel(config.get("trainingModelFilename"));
-            
-            System.err.println();
-            System.err.println("Eval for file : " + config.get("testFilename"));
-            evalObj.evalEachTestCase(config.get("testFilename"), config.get("testVerboseFilename"), ScoreType.LIBLINEAR_SCORE, false);
-            evalObj.evalEachTestCase(config.get("testFilename"), config.get("testVerboseFilename"), ScoreType.CROSSWIKIS_SCORE_ONLY, false);
-            evalObj.evalEachTestCase(config.get("testFilename"), config.get("testVerboseFilename"), ScoreType.LONGEST_TKSP_SCORE, false);
-           
-            System.err.println();
-            System.err.println("Eval for file : " + config.get("trainingFilename"));
-            evalObj.evalEachTestCase(config.get("trainingFilename"), "", ScoreType.LIBLINEAR_SCORE, false);
-            evalObj.evalEachTestCase(config.get("trainingFilename"), "", ScoreType.CROSSWIKIS_SCORE_ONLY, false);
-            evalObj.evalEachTestCase(config.get("trainingFilename"), "", ScoreType.LONGEST_TKSP_SCORE, false);
+            // LibLinear:
+            EvalLinearOrSVMModel evalLinearModelObj = new EvalLinearOrSVMModel(config.get("trainingModelLinearFilename"), EvalLinearOrSVMModel.ModelType.LIBLINEAR);
+            evalLinearModelObj.eval(config.get("testIITBFilename"), config.get("testIITBVerboseFilename"), false);
+            evalLinearModelObj.eval(config.get("testWikilinksFilename"), "", false);
+
+            // LibSVM:
+            evalLinearModelObj = new EvalLinearOrSVMModel(config.get("trainingModelSVMFilename"), EvalLinearOrSVMModel.ModelType.LIBSVM);
+            evalLinearModelObj.eval(config.get("testIITBFilename"), config.get("testIITBVerboseFilename"), false);
+            evalLinearModelObj.eval(config.get("testWikilinksFilename"), "", false);
+
             return;
         }
         
@@ -181,7 +188,7 @@ public class Main {
                     config.get("invdictFilename"), 
                     config.get("dictFilename"),
                     config.get("allEntsFilename"), 
-                    config.get("existenceProbsFilename"),
+                    config.get("keyphrasenessFilename"),
                     config.get("contextProbsFilename"),
                     Double.parseDouble(config.get("theta")),
                     new IITBPagesIterator(config.get("groundTruthAnnotationsFilename"), additionalIITBAnnotationsFile, config.get("IITBDocsDir")),

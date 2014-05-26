@@ -9,11 +9,11 @@
 ###############################################################################
 [IITB-testing]
 wikiRedirectsFile:wikiRedirects/wikipedia_redirect.txt
-invdictFilename: crosswikiPrunnedData/prunned_invdict_IITB
-dictFilename: crosswikiPrunnedData/prunned_dict_IITB
+invdictFilename: crosswiki/crosswikiPrunnedData/prunned_invdict_IITB
+dictFilename: crosswiki/crosswikiPrunnedData/prunned_dict_IITB
 contextProbsFilename:  contextsProbsIITB/probs.txt
 # file containing P(context | n,e)
-existenceProbsFilename: existenceProbsFromCrosswikis/probs.txt
+keyphrasenessFilename: dummyData/all_dummy_probs
 # P(\exists ent | name)
 allEntsFilename : entsWithDocFrequencies/ents.txt
 # all entities from Wikilinks
@@ -34,10 +34,10 @@ improvedIITB:false
 ###############################################################################
 [tksp-classifier]
 wikiRedirectsFile:wikiRedirects/wikipedia_redirect.txt
-##invdictFilename: crosswikiPrunnedData/prunned_invdict_IITB
-##dictFilename: crosswikiPrunnedData/prunned_dict_IITB
-invdictFilename: mergedCrosswikis/inv.dict.merged_full
-dictFilename: mergedCrosswikis/dict.merged
+##invdictFilename: crosswiki/crosswikiPrunnedData/prunned_invdict_IITB
+##dictFilename: crosswiki/crosswikiPrunnedData/prunned_dict_IITB
+invdictFilename: crosswiki/mergedCrosswikis/inv.dict.merged
+dictFilename: crosswiki/mergedCrosswikis/dict.merged
 allEntsFilename : entsWithDocFrequencies/ents.txt
 #
 WikilinksDir: inputWikilinksData/annotated_sentences/
@@ -49,13 +49,21 @@ IITBDocsDir: evalData/IITB/crawledDocs/
 testOutputFileRoot: test_names_tksp_classifier
 ###############################################################################
 
+###############################################################################
+[tksp-classifier-sample-input-data]
+wikilinksFilename : /mnt/SG/ganeao/wikilinks_project/training_names_tksp_classifier.features_data
+testWikilinksFilename : /mnt/SG/ganeao/wikilinks_project/wikilinks_test_data
+trainWikilinksFilename : /mnt/SG/ganeao/wikilinks_project/wikilinks_train_data
+###############################################################################
+
 
 ###############################################################################
 [tksp-classifier-eval]
-trainingModelFilename : /home/octi/Desktop/nlp/liblinear-1.94/training_names_tksp_classifier.features_short_data.model
-trainingFilename : /home/octi/Desktop/nlp/liblinear-1.94/training_names_tksp_classifier.features_short_data
-testFilename : /home/octi/Desktop/nlp/liblinear-1.94/test_names_tksp_classifier.features_data
-testVerboseFilename : /home/octi/Desktop/nlp/liblinear-1.94/test_names_tksp_classifier.features_verbose
+trainingModelLinearFilename : /mnt/SG/ganeao/liblinear-1.94/wikilinks_train_data_linear.model
+trainingModelSVMFilename : /mnt/SG/ganeao/libsvm-3.18/wikilinks_train_data_svm.model
+testIITBFilename : /mnt/SG/ganeao/wikilinks_project/test_names_tksp_classifier.features_data
+testIITBVerboseFilename : /mnt/SG/ganeao/wikilinks_project/test_names_tksp_classifier.features_verbose
+testWikilinksFilename : /mnt/SG/ganeao/wikilinks_project/wikilinks_test_data
 ###############################################################################
 
 
@@ -63,7 +71,7 @@ testVerboseFilename : /home/octi/Desktop/nlp/liblinear-1.94/test_names_tksp_clas
 [compute-context-probs]
 wikiRedirectsFile: wikiRedirects/wikipedia_redirect.txt
 allEntsFilename : entsWithDocFrequencies/ents.txt
-invdictFilename: crosswikiPrunnedData/prunned_invdict_IITB
+invdictFilename: crosswiki/crosswikiPrunnedData/prunned_invdict_IITB
 WikilinksDir: inputWikilinksData/annotated_sentences/
 groundTruthAnnotationsFilename: evalData/IITB/CSAW_Annotations.xml
 IITBDocsDir: evalData/IITB/crawledDocs/
@@ -73,6 +81,6 @@ IITBDocsDir: evalData/IITB/crawledDocs/
 
 ###############################################################################
 [SortInvdictByName]
-invdictFilename: crosswikiPrunnedData/prunned_invdict_IITB
+invdictFilename: crosswiki/crosswikiPrunnedData/prunned_invdict_IITB
 ###############################################################################
 

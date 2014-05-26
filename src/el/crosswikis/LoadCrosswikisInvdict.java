@@ -96,13 +96,6 @@ public class LoadCrosswikisInvdict {
                 line = in.readLine();
                 continue;             
             }
-            /***************************
-            if (cprob < 0.002) {
-                line = in.readLine();
-                continue;             
-            }
-            ***************************/           
-
             
             String mention = left.substring(left.indexOf(" ") + 1);         
             

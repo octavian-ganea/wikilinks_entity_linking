@@ -777,7 +777,7 @@ public class GenCandidateEntityNamePairs {
             String invdictFilename, 
             String dictFilename, 
             String allEntsFilename, 
-            String existenceProbsFilename,
+            String keyphrasenessFilename,
             String contextProbsFilename,
             double theta, 
             GenericPagesIterator inputPagesIterator,
@@ -806,9 +806,7 @@ public class GenCandidateEntityNamePairs {
         contextProbs = LoadContextProbs.load(contextProbsFilename);
 
         if (includeDummyEnt) {
-            // Select one possible set of existence probs:
-            
-            dummyProbabilities = LoadKeyphrasenessDummyProbs.load(existenceProbsFilename);
+            dummyProbabilities = LoadKeyphrasenessDummyProbs.load(keyphrasenessFilename);
         }
         
         System.err.println("[INFO] Writing winner entities...");
